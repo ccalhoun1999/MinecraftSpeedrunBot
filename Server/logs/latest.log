@@ -1,0 +1,74 @@
+[16:43:03] [main/INFO]: Environment: authHost='https://authserver.mojang.com', accountsHost='https://api.mojang.com', sessionHost='https://sessionserver.mojang.com', servicesHost='https://api.minecraftservices.com', name='PROD'
+[16:43:03] [main/WARN]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[16:43:03] [main/WARN]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[16:43:03] [main/WARN]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[16:43:03] [main/WARN]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[16:43:03] [main/WARN]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[16:43:03] [main/INFO]: Reloading ResourceManager: Default
+[16:43:03] [Worker-Main-12/INFO]: Loaded 7 recipes
+[16:43:03] [Worker-Main-12/INFO]: Loaded 927 advancements
+[16:43:04] [Server thread/INFO]: Starting minecraft server version 1.16.4
+[16:43:04] [Server thread/INFO]: Loading properties
+[16:43:04] [Server thread/INFO]: Default game type: SURVIVAL
+[16:43:04] [Server thread/INFO]: Generating keypair
+[16:43:04] [Server thread/INFO]: Starting Minecraft server on *:25565
+[16:43:04] [Server thread/INFO]: Using default channel type
+[16:43:05] [Server thread/WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[16:43:05] [Server thread/WARN]: The server will make no attempt to authenticate usernames. Beware.
+[16:43:05] [Server thread/WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[16:43:05] [Server thread/WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[16:43:05] [Server thread/INFO]: Preparing level "world"
+[16:43:05] [Server thread/INFO]: Preparing start region for dimension minecraft:overworld
+[16:43:05] [Server thread/INFO]: Preparing spawn area: 0%
+[16:43:05] [Server thread/INFO]: Preparing spawn area: 0%
+[16:43:06] [Server thread/INFO]: Preparing spawn area: 0%
+[16:43:08] [Worker-Main-11/INFO]: Preparing spawn area: 83%
+[16:43:08] [Worker-Main-10/INFO]: Preparing spawn area: 83%
+[16:43:08] [Worker-Main-12/INFO]: Preparing spawn area: 83%
+[16:43:08] [Worker-Main-13/INFO]: Preparing spawn area: 84%
+[16:43:08] [Worker-Main-12/INFO]: Preparing spawn area: 95%
+[16:43:09] [Worker-Main-10/INFO]: Preparing spawn area: 96%
+[16:43:09] [Server thread/INFO]: Preparing spawn area: 99%
+[16:43:09] [Server thread/INFO]: Time elapsed: 4599 ms
+[16:43:09] [Server thread/INFO]: Done (4.655s)! For help, type "help"
+[16:43:15] [Server thread/INFO]: Speedrunner[/127.0.0.1:55399] logged in with entity id 270 at (167.2187012393316, 66.0, -207.38394611341047)
+[16:43:15] [Server thread/INFO]: Speedrunner joined the game
+[16:43:28] [Server thread/INFO]: dodossssssssss[/127.0.0.1:55410] logged in with entity id 287 at (168.6442744819822, 66.0, -205.2061433474827)
+[16:43:28] [Server thread/INFO]: dodossssssssss joined the game
+[16:44:53] [Server thread/INFO]: dodossssssssss lost connection: Disconnected
+[16:44:53] [Server thread/INFO]: dodossssssssss left the game
+[16:44:57] [Server thread/INFO]: dodossssssssss[/127.0.0.1:55422] logged in with entity id 415 at (164.79148687799827, 66.0, -205.90919173117518)
+[16:44:57] [Server thread/INFO]: dodossssssssss joined the game
+[16:45:23] [Server thread/INFO]: <dodossssssssss> Speedrunner
+[16:45:23] [Server thread/INFO]: <Speedrunner> Speedrunner
+[16:45:34] [Server thread/INFO]: Speedrunner lost connection: Disconnected
+[16:45:34] [Server thread/INFO]: Speedrunner left the game
+[16:45:37] [Server thread/INFO]: Speedrunner[/127.0.0.1:55430] logged in with entity id 475 at (167.2187012393316, 66.0, -207.38394611341047)
+[16:45:37] [Server thread/INFO]: Speedrunner joined the game
+[16:45:46] [Server thread/INFO]: dodossssssssss lost connection: Disconnected
+[16:45:46] [Server thread/INFO]: dodossssssssss left the game
+[16:46:15] [Server thread/INFO]: Speedrunner lost connection: Disconnected
+[16:46:15] [Server thread/INFO]: Speedrunner left the game
+[16:47:43] [Server thread/INFO]: dodossssssssss[/127.0.0.1:55466] logged in with entity id 522 at (165.29461088115755, 66.0, -205.66100886278943)
+[16:47:43] [Server thread/INFO]: dodossssssssss joined the game
+[16:47:47] [Server thread/INFO]: Speedrunner[/127.0.0.1:55468] logged in with entity id 534 at (167.2187012393316, 66.0, -207.38394611341047)
+[16:47:47] [Server thread/INFO]: Speedrunner joined the game
+[16:47:49] [Server thread/INFO]: <dodossssssssss> talk
+[16:47:49] [Server thread/INFO]: <Speedrunner> talk
+[16:47:53] [Server thread/INFO]: <dodossssssssss> Speedrunner
+[16:47:53] [Server thread/INFO]: <Speedrunner> Speedrunner
+[16:47:58] [Server thread/INFO]: <dodossssssssss> paoJ21kl234!#%%#wklae/nlkfg
+[16:47:58] [Server thread/INFO]: <Speedrunner> paoJ21kl234!#%%#wklae/nlkfg
+[16:48:00] [Server thread/INFO]: dodossssssssss lost connection: Disconnected
+[16:48:00] [Server thread/INFO]: dodossssssssss left the game
+[16:48:18] [Server thread/INFO]: Speedrunner lost connection: Disconnected
+[16:48:18] [Server thread/INFO]: Speedrunner left the game
+[16:48:23] [Server thread/INFO]: dodossssssssss[/127.0.0.1:55476] logged in with entity id 590 at (164.24275146796896, 65.0, -204.66088324451408)
+[16:48:23] [Server thread/INFO]: dodossssssssss joined the game
+[16:48:27] [Server thread/INFO]: Speedrunner[/127.0.0.1:55485] logged in with entity id 595 at (167.2187012393316, 66.0, -207.38394611341047)
+[16:48:27] [Server thread/INFO]: Speedrunner joined the game
+[16:48:31] [Server thread/INFO]: [dodossssssssss: Kicked Speedrunner: Kicked by an operator]
+[16:48:31] [Server thread/INFO]: Speedrunner lost connection: Kicked by an operator
+[16:48:31] [Server thread/INFO]: Speedrunner left the game
+[16:48:45] [Server thread/INFO]: dodossssssssss lost connection: Disconnected
+[16:48:45] [Server thread/INFO]: dodossssssssss left the game
