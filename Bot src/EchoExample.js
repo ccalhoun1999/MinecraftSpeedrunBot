@@ -1,21 +1,37 @@
 const { BADHINTS } = require('dns')
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require("mineflayer-pathfinder")
-const GoalFollow = goals.GoalFollow
-const GoalBlock = goals.GoalBlock
-const GoalGetToBlock = goals.GoalGetToBlock
 const GoalXZ = goals.GoalXZ
-const mineflayerViewer = require('prismarine-viewer').mineflayer
+goals.Goal
  
 const bot = mineflayer.createBot({
   host: 'localhost', // optional
-  port: 50274,
+  port: 58835,
   username: 'Speedrunner',
   version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
 })
 
 bot.loadPlugin(pathfinder)
 bot.loadPlugin(require('mineflayer-collectblock').plugin)
+
+let mcData
+bot.once("spawn", () =>{
+  mcData = require("minecraft-data")(bot.version)
+  const movements = new Movements(bot, mcData)
+  bot.pathfinder.setMovements(movements)
+
+  bot.chat("/locate village")
+})
+
+//on chat
+bot.on('chat', (username, message) => {
+  mineBlock(username, message)
+})
+
+//recieving server messages
+bot.once("message", (jsonMsg, position) => {
+  goToVillage(jsonMsg)
+})
 
 //update function *********************************** update function
 bot.on("physicTick", () => {
@@ -26,11 +42,6 @@ bot.on("physicTick", () => {
   // const entity = bot.nearestEntity()
   // if (entity) bot.lookAt(entity.position.offset(0, entity.height, 0))
 });
-
-//locate the nearest village
-function locateVillage(){
-  bot.chat("/locate village")
-}
 
 //go to nearest village
 function goToVillage(jsonMsg){
@@ -46,10 +57,8 @@ function goToVillage(jsonMsg){
   const x = parseInt(text[5])
   const z = parseInt(text[7])
 
-  bot.lookat
-
   const goal = new GoalXZ(x, z)
-  bot.pathfinder.setGoal(goal, true)
+  bot.pathfinder.setGoal(goal)
 }
 
 function mineBlock(username, message) {
@@ -97,22 +106,3 @@ function mineBlock(username, message) {
     }
   })
 }
-
-let mcData
-bot.once("spawn", () =>{
-  mcData = require("minecraft-data")(bot.version)
-  const movements = new Movements(bot, mcData)
-  bot.pathfinder.setMovements(movements)
-  // bot.pathfinder.thinkTimeout = 30 * 1000
-
-  locateVillage()
-})
-
-//on chat
-bot.on('chat', (username, message) => {
-  mineBlock(username, message)
-})
-
-bot.once("message", (jsonMsg, position) => {
-  goToVillage(jsonMsg)
-})
