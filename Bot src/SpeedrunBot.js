@@ -1,6 +1,7 @@
 const { throws } = require('assert')
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require("mineflayer-pathfinder")
+const { PassThrough } = require('stream')
 const Recipe = require('prismarine-recipe')("1.16").Recipe
 const { Vec3 } = require('vec3')
 const GoalXZ = goals.GoalXZ
@@ -11,7 +12,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 63954,
+            port: 62976,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -151,14 +152,8 @@ class SpeedrunBot{
                 const recipe = this.bot.recipesFor(item.id, null, null, craftingBlock)[0]
 
                 //reverse the recipe because the recipes are reversed for some reason
-                if (recipe.inShape.length == 3){
-                    let temp = recipe.inShape[0]
-                    recipe.inShape[0] = recipe.inShape[2]
-                    recipe.inShape[2] = temp
-                } else if (recipe.inShape.length == 2){
-                    let temp = recipe.inShape[0]
-                    recipe.inShape[0] = recipe.inShape[1]
-                    recipe.inShape[1] =  temp
+                if (recipe.inShape != null){
+                    recipe.inShape = recipe.inShape.reverse();
                 }
                 
                 try {

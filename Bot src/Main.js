@@ -14,6 +14,29 @@ speedrunner.bot.once("spawn", () =>{
     speedrunner.bot.pathfinder.setMovements(movements)
 
     speedrunner.mcData = mcData
+
+    //FSM Strat, implement FSM and change to HFSM later?
+    //village
+        //asynchronously look for flint while going to village
+    //3 wood
+        //1 bench
+        //8 sticks
+        //wood pick
+        //3 cobble
+        //stone pick
+        //5 cobble
+        //stone axe
+        //stone hoe
+    //~10 beds
+    //Raid chests (destroy all chests will be easiest)
+    //32 planks
+    //20 cobble
+    //hay for ~20 bread
+    //iron golem
+    //bucket of water
+    //finish flint n steel
+    //Find lava pool
+    //Build nether portal
 })
 
 //recieving server messages
@@ -45,11 +68,13 @@ speedrunner.bot.on('chat', (username, message) => {
             break
         //list inventory in chat
         //syntax: inventory
-        case args[0] === "list":
+        case args[0] === "inventory":
             speedrunner.sayItems()
             break
         //locate village and travel there
         //syntax: village
+        //Doesn't work as anticipated yet, goes to the specific coordinates rather than to the border of the village
+        //Pathfinder is also pretty slow, not sure why
         case args[0] === "village":
             speedrunner.bot.chat("/locate village")
             break
@@ -100,16 +125,27 @@ speedrunner.bot.on('chat', (username, message) => {
 
             speedrunner.craftItem(args[1], amount)
             break
+        //Doesn't work as anticipated, struggles to place the block
         case args[0] === "place":
             if (args.length < 2){
                 speedrunner.bot.chat("need block name")
             }
 
-            let name = args[1]
-            let goalBlock = speedrunner.moveToBlock("dirt")
-
-            speedrunner.putBlock(name, goalBlock)
+            //circle around north, south, east, west until block is placed or fail
+            //I tried using catch except but it still crashes for some reason so for
+            //the time being I have commented out directions other than east
+            speedrunner.bot.look(0, -3.14 / 3, true)
+            speedrunner.putBlock(args[1], speedrunner.bot.blockAtCursor())
+            //speedrunner.bot.look(3.14 / 2, -3.14 / 3, true)
+            //speedrunner.putBlock(args[1], speedrunner.bot.blockAtCursor())
+            
+            //speedrunner.bot.look(3.14, -3.14 / 3, true)
+            //speedrunner.putBlock(args[1], speedrunner.bot.blockAtCursor())
+            
+            //speedrunner.bot.look(3 * 3.14 / 2, -3.14 / 3, true)
+            //speedrunner.putBlock(args[1], speedrunner.bot.blockAtCursor())   
             break
+            
         case args[0] === "move":
             if (args.length < 2){
                 speedrunner.bot.chat("need block name")
