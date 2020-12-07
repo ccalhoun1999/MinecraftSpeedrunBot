@@ -6,7 +6,7 @@ goals.Goal
  
 const bot = mineflayer.createBot({
   host: 'localhost', // optional
-  port: 58835,
+  port: 54583,
   username: 'Speedrunner',
   version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
 })
@@ -20,12 +20,44 @@ bot.once("spawn", () =>{
   const movements = new Movements(bot, mcData)
   bot.pathfinder.setMovements(movements)
 
-  bot.chat("/locate village")
+  //bot.chat("/locate village")
+  
 })
 
 //on chat
 bot.on('chat', (username, message) => {
-  mineBlock(username, message)
+  //mineBlock(username, message)
+  const args = message.split(' ')
+  let amount = null
+  switch(true){
+    case args[0] === "craft":
+      if (args.length < 2){
+          bot.chat("need item name")
+      }
+
+      amount = 1
+      if (args.length === 3)
+          amount = parseInt(args[2])
+
+      const item = mcData.findItemOrBlockByName(args[1])
+
+      let craftingTable = mcData.blocksByName["crafting_table"]
+
+      const craftingBlock = bot.findBlock({
+          matching: craftingTable.id
+      })
+
+      const recipe = bot.recipesFor(item.id, null, null, craftingBlock)[0]
+
+      bot.craft(recipe, amount, craftingBlock, err =>{
+        if (err) {
+          bot.chat(err.message)
+        } else {
+          bot.chat('done crafting')
+        }
+      })
+      break
+  }
 })
 
 //recieving server messages

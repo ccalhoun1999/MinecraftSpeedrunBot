@@ -1,6 +1,7 @@
 const { throws } = require('assert')
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require("mineflayer-pathfinder")
+const Recipe = require('prismarine-recipe')("1.16").Recipe
 const { Vec3 } = require('vec3')
 const GoalXZ = goals.GoalXZ
 const GoalGetToBlock = goals.GoalGetToBlock
@@ -10,7 +11,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 49528,
+            port: 63954,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -80,7 +81,7 @@ class SpeedrunBot{
     }
 
     //list your inventory
-    listInv(items = this.bot.inventory.items()) {
+    sayItems(items = this.bot.inventory.items()) {
         const output = items.map(this.itemToString).join(', ')
         if (output) {
           this.bot.chat(output)
@@ -136,8 +137,8 @@ class SpeedrunBot{
     }
 
     //craft an item
-    craftItem (name, amount) {
-        const item = require('minecraft-data')(this.bot.version).findItemOrBlockByName(name)
+    async craftItem (name, amount) {
+        const item = this.mcData.findItemOrBlockByName(name)
 
         let craftingTable = this.mcData.blocksByName["crafting_table"]
 
@@ -147,12 +148,24 @@ class SpeedrunBot{
 
         if (item) {
             if (this.canCraft(item, craftingBlock)){
-                const recipe = this.bot.recipesFor(item.id, null, 1, craftingBlock)[0]
+                const recipe = this.bot.recipesFor(item.id, null, null, craftingBlock)[0]
+
+                //reverse the recipe because the recipes are reversed for some reason
+                if (recipe.inShape.length == 3){
+                    let temp = recipe.inShape[0]
+                    recipe.inShape[0] = recipe.inShape[2]
+                    recipe.inShape[2] = temp
+                } else if (recipe.inShape.length == 2){
+                    let temp = recipe.inShape[0]
+                    recipe.inShape[0] = recipe.inShape[1]
+                    recipe.inShape[1] =  temp
+                }
+                
                 try {
-                    this.bot.craft(recipe, amount, craftingBlock)
+                    await this.bot.craft(recipe, amount, craftingBlock)
                     this.bot.chat(`did the recipe for ${name} ${amount} times`)
                 } catch (err) {
-                    this.bot.chat(`error making ${name}`)
+                    this.bot.chat(err.message)
                 }
             }
         } else {
@@ -160,6 +173,7 @@ class SpeedrunBot{
         }
     }
 
+    //checks if an item is craftable
     canCraft(item, table){
         const recipe = this.bot.recipesFor(item.id, null, 1, table)[0]
         if (recipe) {
@@ -171,19 +185,19 @@ class SpeedrunBot{
         }
     }
 
-    putCrafting(block){
-        //find the nearest dirt/sand block and place a crafting table on it
+    //places a
+    putBlock(name, block){
+        if (this.hasItem(name)){
+            this.equipItem(name, "hand")
 
-        if (this.hasItem("crafting_table")){
-            this.equipItem("crafting_table", "hand")
-
-            this.bot.chat("placing crafting table")
+            this.bot.chat(`placing ${name} on ${block}`)
             this.bot.placeBlock(block, new Vec3(0, 1, 0))
         } else {
-            this.bot.chat("no crafting table in inventory")
+            this.bot.chat(`no ${name} in inventory`)
         }
     }
 
+    //move right next to a block
     moveToBlock(block){
         const blockType = this.mcData.blocksByName[block]
 
@@ -195,6 +209,95 @@ class SpeedrunBot{
         this.bot.pathfinder.setGoal(goal)
 
         return goalBlock
+    }
+
+    //opens a chest and stays inside of it
+    watchChest (minecart) {
+        let chestToOpen
+        if (minecart) {
+            chestToOpen = Object.keys(this.bot.entities).map(id => this.bot.entities[id]).find(e => e.entityType === this.mcData.entitiesByName.chest_minecart && 
+                e.objectData.intField === 1 && 
+                this.bot.entity.position.distanceTo(e.position) < 3)
+            if (!chestToOpen) {
+                this.bot.chat('no chest minecart found')
+                return
+            }
+        } else {
+            chestToOpen = this.bot.findBlock({
+                matching: ['chest', 'ender_chest', 'trapped_chest'].map(name => this.mcData.blocksByName[name].id),
+                maxDistance: 6
+            })
+            if (!chestToOpen) {
+                this.bot.chat('no chest found')
+                return
+            }
+        }
+
+        const chest = this.bot.openChest(chestToOpen)
+        chest.on('open', () => {
+            this.sayItems(chest.items())
+        })
+        chest.on('updateSlot', (oldItem, newItem) => {
+            this.bot.chat(`chest update: ${itemToString(oldItem)} -> ${itemToString(newItem)}`)
+        })
+        chest.on('close', () => {
+            this.bot.chat('chest closed')
+        })
+      
+        this.bot.on('chat', (username, message) =>{
+            this.onChestChat(username, message, chest)
+        })
+    }
+
+    onChestChat (username, message, chest) {
+        const command = message.split(' ')
+        switch (true) {
+            case /^close$/.test(message):
+                this.closeChest(chest)
+                break
+            case /^withdraw \d+ \w+$/.test(message):
+                // withdraw amount name
+                // ex: withdraw 16 stick
+                this.withdrawItem(command[2], command[1], chest)
+                break
+            case /^deposit \d+ \w+$/.test(message):
+                // deposit amount name
+                // ex: deposit 16 stick
+                this.depositItem(command[2], command[1], chest)
+                break
+        }
+    }
+  
+    closeChest (chest) {
+        chest.close()
+    }
+  
+    async withdrawItem (name, amount, chest) {
+        const item = itemByName(chest.items(), name)
+        if (item) {
+            try {
+                await chest.withdraw(item.type, null, amount)
+                this.bot.chat(`withdrew ${amount} ${item.name}`)
+            } catch (err) {
+                this.bot.chat(`unable to withdraw ${amount} ${item.name}`)
+            }
+      } else {
+            this.bot.chat(`unknown item ${name}`)
+      }
+    }
+  
+    async depositItem (name, amount, chest) {
+        const item = itemByName(this.bot.inventory.items(), name)
+        if (item) {
+            try {
+                await chest.deposit(item.type, null, amount)
+                this.bot.chat(`deposited ${amount} ${item.name}`)
+            } catch (err) {
+                this.bot.chat(`unable to deposit ${amount} ${item.name}`)
+            }
+        } else {
+            this.bot.chat(`unknown item ${name}`)
+        }
     }
 }
 

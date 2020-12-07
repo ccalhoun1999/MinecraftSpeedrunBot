@@ -45,8 +45,8 @@ speedrunner.bot.on('chat', (username, message) => {
             break
         //list inventory in chat
         //syntax: inventory
-        case args[0] === "inventory":
-            speedrunner.listInv()
+        case args[0] === "list":
+            speedrunner.sayItems()
             break
         //locate village and travel there
         //syntax: village
@@ -106,13 +106,9 @@ speedrunner.bot.on('chat', (username, message) => {
             }
 
             let name = args[1]
-            switch(true){
-                case name === "crafting_table":
-                    let goalBlock = speedrunner.moveToBlock("dirt")
+            let goalBlock = speedrunner.moveToBlock("dirt")
 
-                    speedrunner.putCrafting(goalBlock)
-                    break
-            }
+            speedrunner.putBlock(name, goalBlock)
             break
         case args[0] === "move":
             if (args.length < 2){
@@ -121,6 +117,12 @@ speedrunner.bot.on('chat', (username, message) => {
             }
 
             speedrunner.moveToBlock(args[1])
+            break
+        case args[0] === "chest":
+            speedrunner.watchChest(false)
+            break
+        case args[0] === "chestminecraft":
+            speedrunner.watchChest(true)
             break
     }
 })
