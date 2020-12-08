@@ -1,3 +1,10 @@
+//are these redundent? maybe...
+const mineflayer = require('mineflayer')
+const pathfinder = require('mineflayer-pathfinder').pathfinder
+const Movements = require('mineflayer-pathfinder').Movements
+const { GoalXZ, GoalNear, GoalCompositeAny } = require('mineflayer-pathfinder').goals
+const Vec3 = require("Vec3")
+
 class PortalBuildWaterCast{
     constructor(){
         this.v = require('vec3')
@@ -14,8 +21,10 @@ class PortalBuildWaterCast{
         //a portal needs 4 scafolding blocks, 12 lava sources, and a bucket of water
         bot.loadPlugin(require('mineflayer-collectblock').plugin)
 
-        //make sure you have the water first
-        if (!bot.inventory.count(mcData.itemsByName.water_bucket.id) < 1){
+        //make sure you have the water and flint&steel first
+        let haveBuildingMaterials = bot.inventory.count(mcData.itemsByName.water_bucket.id) < 1
+            && bot.inventory.count(mcData.itemsByName.flint_and_steel.id) < 1
+        if (!haveBuildingMaterials){
             return false
         }
 
@@ -34,7 +43,19 @@ class PortalBuildWaterCast{
             )
         }
 
-        let buildOriginBlock = pass
+        //go to lava
+        let lava = bot.findBlock({
+            matching: mcData.blocksByName.lava.id,
+            maxDistance: 1000 //whatever gets it to find stuff that's REALLY far away
+        })
+        let lavaGoal = new GoalCompositeAny([
+            new GoalXZ(lava.position.x, lava.position.z),
+            new GoalNear(lava.position.x, lava.position.y, lava.position.z, 8)
+        ])
+        bot.pathfinder.setGoal(lavaGoal)
+    }
+
+    constructionSequence(bot, buildOriginBlock){
         //pathfind to nearest lava source.
         /*
             I'm still unsure how to do long-distance biome location with mineflayer
@@ -229,6 +250,84 @@ class PortalBuildWaterCast{
                 return;
             }
         }
+    }
+
+    placeLiquid(bot, liquid, destination, callback){
+        const validLiquids = {
+            lavaBucket: 662,
+            waterBucket: 661
+        }
+        const validSpaces = {
+            air: 0,
+            water: 26,
+            lava: 27
+        }
+        const adjacentFaces=[new Vec3(1,0,0),new Vec3(-1,0,0),new Vec3(0,1,0),new Vec3(0,-1,0),new Vec3(0,0,-1),new Vec3(0,0,1)];
+    
+        //make sure the liquid we're trying to place is a liquid at all
+        if(!Object.values(validLiquids).includes(liquid.type)){
+            console.log("Item " + liquid + " (ID: " + liquid.type + ") is not a liquid in a bucket")
+            return false
+        }
+    
+        //make sure there's actually space to place the item
+        if(!Object.values(validSpaces).includes(destination.type)){
+            console.log("No space for liquid at " + destination.position + " because of " + destination.type)
+            return false
+        }
+    
+        bot.equip(liquid, "hand", (err) => {
+            if(!err){
+                //check each potential face water could be placed on to get it in the destination block
+                for(i in adjacentFaces){
+                    let face = adjacentFaces[i]
+                    let checker = destination.position.plus(face).floored()
+                    foundation = bot.blockAt(checker)
+                    
+                    //if there is a block there, place the liquid against that block
+                    if(foundation){
+                        bot.lookAt(checker, null, () => {
+                            bot.activateItem()
+                        })
+                        bot.chat("Placed!")
+                        return true
+                    }
+                }
+                bot.chat("can't place!")
+                return false
+            }
+        })
+    
+        //not sure how to do callbacks tbh
+        return
+    }
+    
+    bucketLiquid(bot, bucket, destination, callback){
+        const validSpaces = {
+            water: 26,
+            lava: 27
+        }
+    
+        //make sure the thing we're trying to bucket is an actual liquid
+        if(!Object.values(validSpaces).includes(destination.type)){
+            console.log("No liquid at " + destination.position + ". Instead it's " + destination.type)
+            return false
+        }
+
+        //make sure the liquid is an actual source block
+        if(destination.metadata != 0){
+            console.log("The liquid at " + destination.position + " isn't a source block")
+        }
+    
+        bot.equip(bucket, "hand", (err) => {
+            if(!err){
+                bot.lookAt(checker, null, () => {
+                    bot.activateItem()
+                })
+                bot.chat("Placed!")
+                return true
+            }
+        })
     }
 }
 

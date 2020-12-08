@@ -1,5 +1,11 @@
 [
   {
+    "uuid": "9bfbd909-3bb7-3686-a882-331697fdc1da",
+    "name": "pathfinder_bot",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  },
+  {
     "uuid": "4d2d5d11-1289-3e8d-a1f4-23c51dcabb3a",
     "name": "Tommynator314159",
     "level": 4,
