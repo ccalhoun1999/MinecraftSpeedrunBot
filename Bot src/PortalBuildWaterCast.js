@@ -4,6 +4,7 @@ const pathfinder = require('mineflayer-pathfinder').pathfinder
 const Movements = require('mineflayer-pathfinder').Movements
 const { GoalXZ, GoalNear, GoalCompositeAny } = require('mineflayer-pathfinder').goals
 const Vec3 = require("Vec3")
+const csp = require("csp.js")
 
 class PortalBuildWaterCast{
     constructor(){
@@ -30,6 +31,7 @@ class PortalBuildWaterCast{
 
         //first, get 4 dirt for scafold
         //needs the CollectBlock module
+        //might also be kinda scuff idk
         while (!bot.inventory.count(mcData.blocksByName.dirt.id < 4)){
             bot.collectBlock(
                 bot.findBlock({
@@ -43,42 +45,23 @@ class PortalBuildWaterCast{
             )
         }
 
-        //go to lava
-        let lava = bot.findBlock({
-            matching: mcData.blocksByName.lava.id,
-            maxDistance: 1000 //whatever gets it to find stuff that's REALLY far away
-        })
+        //go to lava. 1-1 is the origin as far as the build is concerned
+        let fullLava = this.locateLava()
+        if(!fullLava){
+            console.log("No valid lava pool could be found!")
+            return false
+        }
+        let lava = fullLava[1][1]
         let lavaGoal = new GoalCompositeAny([
             new GoalXZ(lava.position.x, lava.position.z),
-            new GoalNear(lava.position.x, lava.position.y, lava.position.z, 8)
+            new GoalNear(lava.position.x, lava.position.y, lava.position.z, 2)
         ])
         bot.pathfinder.setGoal(lavaGoal)
+
+        bot.once("goal_reached", constructionSequence(bot, lava))
     }
 
-    constructionSequence(bot, buildOriginBlock){
-        //pathfind to nearest lava source.
-        /*
-            I'm still unsure how to do long-distance biome location with mineflayer
-            The checks below should be part of the search process
-        */
-
-        //check: are there 12 lavas in a group AND the border of the pool is 4 long and has two other lavas next to it
-        //AND there is three blocks of clear space above the 4 lava area and the land right next to it.
-            //if there isn't, try looking somewhere else, I guess.
-
-        //once the lava pool is confirmed, memorize the 4 long lava segment. This will be the 
-        //  portal's actual location.
-        //the original buildOriginBlock is 2L
-        let blk = this.bot.world.getBlock       //the getBlock function
-        let orPos = buildOriginBlock.position   //the origin block
-        let buildSite = [[], [], []]
-
-        //in mineflayer, south and west are positive
-        for(i = -1; i <= 1; ++i){
-            for(k = -1; k <= 2; ++k){
-                buildSite[i+1][k+1] = blk(orPos + this.v(i, 0,))
-            }
-        }
+    constructionSequence(bot, buildSite){
         
         /*
         tL is techniqueList, a list of everything the bot needs to do
@@ -99,7 +82,7 @@ class PortalBuildWaterCast{
                         NORTH
             Lava:    [9* AL BL C*]
             Lava:    [1L 2L 3L 4L]      EAST
-            Land:    [5G 6G 7G 8G]*/
+            Land:    [5G 6G 7G 8G]*
         //I might need to manually get block placements ready too...
         //Also... need to figure out how to ground this cardinally, since
         //  relative block placements NEED to be done using non-relative compass
@@ -191,7 +174,7 @@ class PortalBuildWaterCast{
             spam-click flint-n-steel until in Nether
         */
     }
-    //another function I stole from some other dude's bot
+    /*//another function I stole from some other dude's bot
     //https://github.com/PrismarineJS/mineflayer-scaffold/blob/master/index.js
     fullPlaceScaffold(bot, refBlock, face, cb){
         //if we're already holding some scaffolding, place it
@@ -250,6 +233,178 @@ class PortalBuildWaterCast{
                 return;
             }
         }
+    }*/
+
+    locateLava(bot, mcData){
+        /*
+            so, I'm gonna do this with constraint satisfaction
+            what are the variables? Well, there's 6:
+            Border 1 , Border 2, Border 3, Base 1, Base 2, and Border 4
+            They look like this:
+            [any]   Border1 Border2 [any]
+            Border3 Base1   Base2   Border 4
+            Ground  Ground  Ground  Ground
+            The constraints are that these blocks are:
+                Arranged like this
+                Are part of a larger lava pool made of 12 lava
+                Are above y=55 (minecraft sea level is 63), to prevent using underground lava lakes
+            The last one can be handled without constaint satisfaction
+            The second-to-last one can be solved recusively, probably
+            It's the first one the constraint satisfaction is for
+            I'm probably gonna solve it that way too
+        */
+
+        //first, find all of the lava within the search area
+        //  ideally we wouldn't even look below y=55, but we can't do that
+        //      well we can but I'm not sure how
+        let lavaPositions = bot.findBlocks({
+            matching: mcData.blocksByName.lava.id,  //would ideally disqualify blocks below y=55
+            maxDistance: 1000
+        })
+
+        //get the blocks of all lavas above 55
+        let lavas = []
+        let lava
+        for(i in lavaPositions){
+            lava = bot.blockAt(lavaPositions[i])
+            if(lavas[i].y > 55 && lava.metadata == 0){
+                lavas.push(lava)
+            }
+        }
+
+        //get the ground blocks adjacent to lava. Their positions
+        //matter to make sure the decided build site is on a coast line
+        let newAdj
+        let grounds = []
+        for(i in lavas){
+            newAdj = this.getAdjacentBlocks(bot, lavas[i])
+            for(k in newAdj){
+                if(k.type != mcData.blocksByName.lava.id){
+                    grounds.push(newAdj[i])
+                }
+            }
+        }
+
+        //group lavas by adjacency
+        /*
+            So, in theory, a lava lake that is big enough won't even need
+            us to group things together, they'll just be big enough.
+            If we don't group this together ahead of time, there's a chance 
+            that the lava pool we find will be too small. However, if we
+            don't do it, then we don't need to figure out how to do it.
+        */
+
+        /*
+            constraint solve for good lava
+            I'm using https://github.com/PrajitR/jusCSP because
+            why do the work myself?
+            Anyways, jusCSP takes an object with 4 properties:
+                variables: each thing we need and its domains
+                constraints: a series of nodes that takes two variables and a function
+                    that represents the constraints
+                callback: what to do as things are solves (we don't need this)
+                timestep: how long to wait between each calc (we don't need this)
+        */
+       //variables
+        lavaVars = {
+            "Border1": lavas,
+            "Border2": lavas,
+            "Border3": lavas,
+            "Border4": lavas,
+            "Base1": lavas,
+            "Base2": lavas,
+            "Ground1": grounds,
+            "Ground2": grounds,
+            "Ground3": grounds,
+            "Ground4": grounds
+        }
+
+        /*
+            Constraints for the x-axis parallel satisfaction.
+            While jusCPS constraints aren't reflexive, the functions
+                we use as constraints are
+        */
+        lavaConsX = [
+            ["Border1",     "Base1",    this.blocksAdjacentX],
+            ["Border2",     "Border2",  this.blocksAdjacentX],
+            ["Border1",     "Border2",  this.blocksAdjacentX],
+            ["Border3",     "Groun1",   this.blocksAdjacentX],
+            ["Base1",       "Ground2",  this.blocksAdjacentX],
+            ["Base2",       "Ground3",  this.blocksAdjacentX],
+            ["Border4",     "Ground4",  this.blocksAdjacentX],
+            ["Border3",     "Base1",    this.blocksAdjacentX],
+            ["Border4",     "Base2",    this.blocksAdjacentX],
+            ["Ground1",     "Ground2",  this.blocksAdjacentX],
+            ["Ground3",     "Ground4",  this.blocksAdjacentX],
+        ]
+
+        //constraints for the z-axis parallel satisfaction
+        //I know hardcoing sucks, but what do you want from me?
+        lavaConsZ = [
+            ["Border1",     "Base1",    this.blocksAdjacentZ],
+            ["Border2",     "Border2",  this.blocksAdjacentZ],
+            ["Border1",     "Border2",  this.blocksAdjacentZ],
+            ["Border3",     "Groun1",   this.blocksAdjacentZ],
+            ["Base1",       "Ground2",  this.blocksAdjacentZ],
+            ["Base2",       "Ground3",  this.blocksAdjacentZ],
+            ["Border4",     "Ground4",  this.blocksAdjacentZ],
+            ["Border3",     "Base1",    this.blocksAdjacentZ],
+            ["Border4",     "Base2",    this.blocksAdjacentZ],
+            ["Ground1",     "Ground2",  this.blocksAdjacentZ],
+            ["Ground3",     "Ground4",  this.blocksAdjacentZ],
+        ]
+
+        //we need csp for this part
+        //do the initial pass for the x axis
+        cr = csp.solve({lavaVars, lavaConsX})
+        //if it fails on the x axism try again on the Z
+        if(cr === "FAILURE"){constrainResult = csp.solve({lavaVars, lavaConsZ})}
+
+        //if it still failed, no satisfactory lava in range
+        if(cr === "FAILURE"){
+            return null
+        }
+        //if it did, parse that data and return it in a way the bot can use
+        else{
+            return [
+                //notice how it's layed out like the diagrams above!
+                [null,          cr.Border1, cr.Border2, null],
+                [cr.Border3,    cr.Base1,   cr.Base2,   cr.Border4],
+                [cr.Ground1,    cr.Ground2, cr.Ground3, cr.Ground4]
+            ]
+        }
+    }
+
+    //super basic, just return all the blocks adjacent to the argument block
+    getAdjacentBlocks(bot, block){
+        let pos = block.position
+        let adj = []
+        let p
+
+        p = bot.blockAt(pos.plus(new Vec3(1, 0, 0)))
+        if(p){adj.push(p)}
+        p = bot.blockAt(pos.plus(new Vec3(-1, 0, 0)))
+        if(p){adj.push(p)}
+        p = bot.blockAt(pos.plus(new Vec3(0, 0, 1)))
+        if(p){adj.push(p)}
+        p = bot.blockAt(pos.plus(new Vec3(0, 0, -1)))
+        if(p){adj.push(p)}
+
+        return adj
+    }
+
+    blocksAdjacentX(blockOne, blockTwo){
+        //if the absolute value of the difference between 
+        //the two blocks' x is exactly 1, then the blocks are next to
+        //each other on the x axis
+        return Math.abs(blockOne.position.x - blockTwo.position.x) == 1
+    }
+
+    blocksAdjacentZ(blockOne, blockTwo){
+        //if the absolute value of the difference between 
+        //the two blocks' z is exactly 1, then the blocks are next to
+        //each other on the z axis
+        return Math.abs(blockOne.position.z - blockTwo.position.z) == 1
     }
 
     placeLiquid(bot, liquid, destination, callback){
