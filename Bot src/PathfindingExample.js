@@ -2,6 +2,7 @@ const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const GoalFollow = goals.GoalFollow
 const GoalBlock = goals.GoalBlock
+const lavaBuild = require('./PortalBuildWaterCast.js')
 
 const bot = mineflayer.createBot({
     host: 'localhost',
@@ -83,4 +84,16 @@ function locateEmeraldBlock () {
     bot.pathfinder.setGoal(goal)
 }
 
-bot.once('spawn', goToIronGolem)
+function lavaTest(){
+    //l = new lavaBuild.PortalBuildWaterCast()
+    mcData = require('minecraft-data')(bot.version)
+    result = lavaBuild.buildPortal(bot, mcData)
+    if(result){
+        bot.chat("did it, somehow?")
+    }
+    else{
+        console.log("Build failed")
+    }
+}
+
+bot.once('spawn', lavaTest)
