@@ -126,6 +126,11 @@ speedrunner.bot.on('chat', (username, message) => {
             speedrunner.craftItem(args[1], amount)
             break
         //Doesn't work as anticipated, struggles to place the block
+        case args[0] == "clean_inventory":
+            if (args.length < 2){
+                speedrunner.bot.chat("cleaning_inventory")
+                speedrunner.clearInventory()
+            }
         case args[0] === "place":
             if (args.length < 2){
                 speedrunner.bot.chat("need block name")

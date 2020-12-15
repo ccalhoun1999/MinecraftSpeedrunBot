@@ -1,4 +1,5 @@
 const { throws } = require('assert')
+const { waitForDebugger } = require('inspector')
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require("mineflayer-pathfinder")
 const { PassThrough } = require('stream')
@@ -12,7 +13,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 62976,
+            port: 60307,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -88,6 +89,57 @@ class SpeedrunBot{
           this.bot.chat(output)
         } else {
           this.bot.chat('empty inventory')
+        }
+    }
+
+    clearInventory () {
+        let essentials = ["wooden_pickaxe",
+                                "stone_pickaxe",
+                                "iron_pickaxe",
+                                "stone_axe",
+                                "stone_hoe",
+                                "bucket",
+                                "water_bucket",
+                                "bread",
+                                "hay_block",
+                                "wheat",
+                                "cobblestone",
+                                "crafting_table",
+                                "stick",
+                                "lava_bucket",
+                                "oak_wood",
+                                "spruce_wood",
+                                "birch_wood",
+                                "jungle_wood",
+                                "acacia_wood",
+                                "dark_oak_wood",
+                                "oak_planks",
+                                "spruce_planks",
+                                "birch_planks",
+                                "jungle_planks",
+                                "acacia_planks",
+                                "dark_oak_planks",
+                            ]
+        let inv = this.bot.inventory.items()
+        for (var i = 0, size = inv.length; i < size; i++){
+            toss(essentials, inv, i, this.bot, this)
+        }
+        this.sayItems()
+
+        function toss(essentials, inv, i, bot, self) {
+            setTimeout(function() {
+                var item = inv[i]
+                //bot.chat(item.name)
+                if (essentials.indexOf(item.name) == -1) {
+                    bot.tossStack(item)
+                    //bot.chat("tossed" + self.itemToString(item))
+                }
+            }, 100 * i)
+        }
+    }
+
+    check (essentials, item) {
+        if (essentials.indexOf(item) == -1) {
         }
     }
 
@@ -294,6 +346,7 @@ class SpeedrunBot{
             this.bot.chat(`unknown item ${name}`)
         }
     }
+
 }
 
 module.exports = SpeedrunBot
