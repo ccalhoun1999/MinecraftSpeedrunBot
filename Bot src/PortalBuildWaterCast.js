@@ -60,7 +60,12 @@ function buildPortal(bot, mcData){
             console.log("No valid lava pool could be found!")
             return false
         }
-        fullLava.forEach(blockArray => console.log(blockArray.forEach(block => console.log(block.position))))
+        //fullLava.forEach(blockArray => console.log(blockArray.forEach(block => console.log(block.position))))
+        for(i in fullLava){
+            for(k in fullLava[i]){
+                console.log(fullLava[i][k].name + " at" + fullLava[i][k].position)
+            }
+        }
         let lava = fullLava[0][1]
         let lavaGoal = new GoalCompositeAny([
             new GoalXZ(lava.position.x, lava.position.z),
@@ -186,17 +191,27 @@ function locateLava(bot, mcData){
     //matter to make sure the decided build site is on a coast line
     let newAdj
     let grounds = []
+    let lavaId = mcData.blocksByName.lava.id
+    let checkAdj
     for(i in lavas){
         newAdj = getAdjacentBlocks(bot, lavas[i])
         for(k in newAdj){
-            if(newAdj[k].type != mcData.blocksByName.lava.id){
+            checkAdj = newAdj[k].type
+            if(checkAdj !== lavaId){
                 grounds.push(newAdj[i])
             }
         }
     }
-
+    
+    //for whatever reason, some lava blocks (and undefined values)
+    //still sneak through adjacency, so we clean them out here
     console.log("retrived " + grounds.length + " grounds")
     grounds = grounds.filter(grounds => grounds !== undefined)
+    grounds = grounds.filter((block) => {
+        let notLava = block.type !== mcData.blocksByName.lava.id
+        let notAir = block.type !== mcData.blocksByName.air.id
+        return notLava && notAir
+    })
     console.log("reduced to " + grounds.length)
 
     //group lavas by adjacency
@@ -262,9 +277,11 @@ function locateLava(bot, mcData){
         ["Base2",       "Ground3",  blocksAdjacentX],
         ["Border4",     "Ground4",  blocksAdjacentX],
         ["Border3",     "Base1",    blocksAdjacentZ],
+        ["Base1",       "Base2",    blocksAdjacentZ],
         ["Border4",     "Base2",    blocksAdjacentZ],
         ["Ground1",     "Ground2",  blocksAdjacentZ],
         ["Ground3",     "Ground4",  blocksAdjacentZ],
+        ["Ground3",     "Ground2",  blocksAdjacentZ],
     ]
 
     //constraints for the z-axis parallel satisfaction
@@ -278,9 +295,11 @@ function locateLava(bot, mcData){
         ["Base2",       "Ground3",  blocksAdjacentZ],
         ["Border4",     "Ground4",  blocksAdjacentZ],
         ["Border3",     "Base1",    blocksAdjacentX],
+        ["Base1",       "Base2",    blocksAdjacentX],
         ["Border4",     "Base2",    blocksAdjacentX],
         ["Ground1",     "Ground2",  blocksAdjacentX],
         ["Ground3",     "Ground4",  blocksAdjacentX],
+        ["Ground3",     "Ground2",  blocksAdjacentX],
     ]
 
     //we also need to add constraints to make sure no two blocks
@@ -359,14 +378,20 @@ function blocksAdjacentX(blockOne, blockTwo){
     //each other on the x axis
     //console.log(blockOne.type)
     //console.log(blockTwo.type)
-    return Math.abs(blockOne.position.x - blockTwo.position.x) == 1
+    adjOnX = Math.abs(blockOne.position.x - blockTwo.position.x) == 1
+    eqOnY = blockOne.position.y === blockTwo.position.y
+    eqOnZ = blockOne.position.z === blockTwo.position.z
+    return adjOnX && eqOnY && eqOnZ
 }
 
 function blocksAdjacentZ(blockOne, blockTwo){
     //if the absolute value of the difference between 
     //the two blocks' z is exactly 1, then the blocks are next to
     //each other on the z axis
-    return Math.abs(blockOne.position.z - blockTwo.position.z) == 1
+    adjOnZ = Math.abs(blockOne.position.z - blockTwo.position.z) == 1
+    eqOnY = blockOne.position.y === blockTwo.position.y
+    eqOnX = blockOne.position.x === blockTwo.position.x
+    return adjOnZ && eqOnY && eqOnX
 }
 
 function blocksNotTheSame(blockOne, blockTwo){
