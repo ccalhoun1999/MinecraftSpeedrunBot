@@ -38,6 +38,7 @@ class SpeedrunBot{
 
         this.stone_pick = false
         this.six_stone = false
+        this.stone_axe = false
 
         this.beds = 0
         this.chests = false
@@ -51,6 +52,10 @@ class SpeedrunBot{
             case "goingToVillage":
                 if (this.atVillage)
                     this.state = "raidingVillage"
+                break;
+            case "raidingVillage":
+                if(this.beds >= 10 && this.chests && this.stone_axe)
+                    this.state = "ironAndFoodPhase"
                 break;
         }
     }
@@ -84,6 +89,7 @@ class SpeedrunBot{
                     setTimeout(() => { this.craftItem("stone_axe", 1) }, 10000)
                     setTimeout(() => { this.chooseAction() }, 11000)
                     this.six_stone = false
+                    this.stone_axe = true
                 } else {
                     console.log("choosing to raid village")
                     this.raidVillage();
