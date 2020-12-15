@@ -60,6 +60,7 @@ function buildPortal(bot, mcData){
             console.log("No valid lava pool could be found!")
             return false
         }
+        fullLava.forEach(blockArray => console.log(blockArray.forEach(block => console.log(block.position))))
         let lava = fullLava[0][1]
         let lavaGoal = new GoalCompositeAny([
             new GoalXZ(lava.position.x, lava.position.z),
@@ -147,13 +148,23 @@ function locateLava(bot, mcData){
         I'm probably gonna solve it that way too
     */
 
+    //we'd ideally use this to check blocks from findBlocks, but blocks in that method
+    //don't know thier positions (or, at least, liquids don't)
+    function lavacheck(block){
+        if(block.type === mcData.blocksByName.lava.id){
+            if(block.position && block.position.y >= 55){
+                return true
+            }
+        }
+        return false
+    }
     //first, find all of the lava within the search area
     //  ideally we wouldn't even look below y=55, but we can't do that
     //      well we can but I'm not sure how
     let lavaPositions = bot.findBlocks({
-        matching: mcData.blocksByName.lava.id,  //would ideally disqualify blocks below y=55
+        matching: mcData.blocksByName.lava.id,
         maxDistance: 64,
-        count: 256
+        count: 5000
     })
     console.log(lavaPositions.length + " hits")
 
@@ -250,10 +261,10 @@ function locateLava(bot, mcData){
         ["Base1",       "Ground2",  blocksAdjacentX],
         ["Base2",       "Ground3",  blocksAdjacentX],
         ["Border4",     "Ground4",  blocksAdjacentX],
-        ["Border3",     "Base1",    blocksAdjacentX],
-        ["Border4",     "Base2",    blocksAdjacentX],
-        ["Ground1",     "Ground2",  blocksAdjacentX],
-        ["Ground3",     "Ground4",  blocksAdjacentX],
+        ["Border3",     "Base1",    blocksAdjacentZ],
+        ["Border4",     "Base2",    blocksAdjacentZ],
+        ["Ground1",     "Ground2",  blocksAdjacentZ],
+        ["Ground3",     "Ground4",  blocksAdjacentZ],
     ]
 
     //constraints for the z-axis parallel satisfaction
@@ -266,11 +277,24 @@ function locateLava(bot, mcData){
         ["Base1",       "Ground2",  blocksAdjacentZ],
         ["Base2",       "Ground3",  blocksAdjacentZ],
         ["Border4",     "Ground4",  blocksAdjacentZ],
-        ["Border3",     "Base1",    blocksAdjacentZ],
-        ["Border4",     "Base2",    blocksAdjacentZ],
-        ["Ground1",     "Ground2",  blocksAdjacentZ],
-        ["Ground3",     "Ground4",  blocksAdjacentZ],
+        ["Border3",     "Base1",    blocksAdjacentX],
+        ["Border4",     "Base2",    blocksAdjacentX],
+        ["Ground1",     "Ground2",  blocksAdjacentX],
+        ["Ground3",     "Ground4",  blocksAdjacentX],
     ]
+
+    //we also need to add constraints to make sure no two blocks
+    //  are the same. We can do that with some loops. Even though
+    //  it's n^2, but there's, like, 8 entries in each so that's
+    //  just 64 executions, which is negelgable
+    Object.entries(lavaVarsA).forEach(([Akey, Avalue]) => {
+        Object.entries(lavaVarsB).forEach(([Bkey, Bvalue]) => {
+            if(Akey != Bkey){
+                lavaConsX.push([Akey, Bkey, blocksNotTheSame])
+                lavaConsZ.push([Akey, Bkey, blocksNotTheSame])
+            }
+        })
+    })
 
     //we need csp for this part
     //do the initial pass for the x axis
@@ -294,7 +318,7 @@ function locateLava(bot, mcData){
     }
     //if it did, parse that data and return it in a way the bot can use
     else{
-        console.log(cr)
+        //console.log(cr)
         return [
             //notice how it's layed out like the diagrams above!
             //[null,          cr.Border1, cr.Border2, null],
@@ -343,6 +367,12 @@ function blocksAdjacentZ(blockOne, blockTwo){
     //the two blocks' z is exactly 1, then the blocks are next to
     //each other on the z axis
     return Math.abs(blockOne.position.z - blockTwo.position.z) == 1
+}
+
+function blocksNotTheSame(blockOne, blockTwo){
+    //check if these are the same block, because I guess
+    //that's a constraint we need to have
+    return blockOne !== blockTwo
 }
 
 function placeScaffold(bot, destination, callback){
