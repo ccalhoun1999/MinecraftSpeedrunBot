@@ -8,6 +8,7 @@ const csp = require("./csp.js")
 
 exports.buildPortal = buildPortal
 exports.locateLava = locateLava
+exports.constructtionSequence = constructionSequence
 
 function buildPortal(bot, mcData){
     //a portal needs 4 scafolding blocks, 12 lava sources, and a bucket of water
@@ -86,6 +87,7 @@ function buildPortal(bot, mcData){
             console.log("TIME TO BUILD")
         })//constructionSequence(bot, lava))
     }
+    //don't do .all that will try to do every gather at the same time
     Promise.all(gathers).then(findLava(bot, mcData))
 }
 
@@ -94,9 +96,8 @@ function constructionSequence(bot, buildSite){
     /*  Build plane:
         * means any, L means lava, G means ground
                     NORTH
-        Lava:    [9* AL BL C*]
-        Lava:    [1L 2L 3L 4L]      EAST
-        Land:    [5G 6G 7G 8G]*/
+        Lava:    [1 2 3 4]      EAST
+        Land:    [5 6 7 8]*/
     //fun fact: block placements are promises. If I can turn
     //  the bucketting into promises, then this can jut be one fat promise
     //  declaration
@@ -398,7 +399,7 @@ function blocksNotTheSame(blockOne, blockTwo){
     return blockOne !== blockTwo
 }
 
-function placeScaffold(bot, destination, callback){
+function placeScaffold(bot, destination){
     const validSpaces = {
         air: 0,
         water: 26,
@@ -415,7 +416,7 @@ function placeScaffold(bot, destination, callback){
     //make sure there's actually space to place the item
     if(!Object.values(validSpaces).includes(destination.type)){
         console.log("No space for block at " + destination.position + " because of " + destination.type)
-        return false
+        throw("PLACESCAFFFOLD_NOSPACE")
     }
 
     //very dumb way of deciding on which item to use as scaffolding
@@ -427,7 +428,7 @@ function placeScaffold(bot, destination, callback){
     if(!scaf){
         scaf = bot.inventory.findInventoryItem(validScafolds.netherrack)
     }
-    if(!scaf){return false}
+    if(!scaf){throw("PLACESCAFFOLD_NOITEMS")}
 
     bot.equip(scaf, "hand", (err) => {
         if(!err){
@@ -441,21 +442,17 @@ function placeScaffold(bot, destination, callback){
                 
                 //if there is a block there, place the liquid against that block
                 if(foundation){
-                    bot.placeBlock(foundation, zeroVector.minus(face), null)
                     bot.chat("placed!")
-                    return true
+                    return bot.placeBlock(foundation, zeroVector.minus(face), null)
                 }
             }
             bot.chat("can't place!")
-            return false
+            throw("PLACESCAFFOLD_NOFOUNDATION")
         }
     })
-
-    //not sure how to do callbacks tbh
-    return
 }
 
-function placeLiquid(bot, liquid, destination, callback){
+function placeLiquid(bot, liquid, destination){
     const validLiquids = {
         lavaBucket: 662,
         waterBucket: 661
@@ -470,16 +467,16 @@ function placeLiquid(bot, liquid, destination, callback){
     //make sure the liquid we're trying to place is a liquid at all
     if(!Object.values(validLiquids).includes(liquid.type)){
         console.log("Item " + liquid + " (ID: " + liquid.type + ") is not a liquid in a bucket")
-        return false
+        throw("PLACELIQUID_NOLIQUID")
     }
 
     //make sure there's actually space to place the item
     if(!Object.values(validSpaces).includes(destination.type)){
         console.log("No space for block at " + destination.position + " because of " + destination.type)
-        return false
+        throw("PLACELIQUID_NOSPACE")
     }
 
-    bot.equip(liquid, "hand", (err) => {
+    return bot.equip(liquid, "hand", (err) => {
         if(!err){
             //check each potential face water could be placed on to get it in the destination block
             for(i in adjacentFaces){
@@ -500,12 +497,9 @@ function placeLiquid(bot, liquid, destination, callback){
             return false
         }
     })
-
-    //not sure how to do callbacks tbh
-    return
 }
 
-function bucketLiquid(bot, bucket, destination, callback){
+function bucketLiquid(bot, bucket, destination){
     const validSpaces = {
         water: 26,
         lava: 27
@@ -514,15 +508,16 @@ function bucketLiquid(bot, bucket, destination, callback){
     //make sure the thing we're trying to bucket is an actual liquid
     if(!Object.values(validSpaces).includes(destination.type)){
         console.log("No liquid at " + destination.position + ". Instead it's " + destination.type)
-        return false
+        throw("BUCKETLIQUID_NOLIQUID")
     }
 
     //make sure the liquid is an actual source block
     if(destination.metadata != 0){
         console.log("The liquid at " + destination.position + " isn't a source block")
+        throw("BUCKETLIQUID_NOSOURCE")
     }
 
-    bot.equip(bucket, "hand", (err) => {
+    return bot.equip(bucket, "hand", (err) => {
         if(!err){
             bot.lookAt(checker, null, () => {
                 bot.activateItem()
