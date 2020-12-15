@@ -151,6 +151,9 @@ speedrunner.bot.on('chat', (username, message) => {
 
             speedrunner.moveToBlock(args[1])
             break
+
+        case "ironPhase":
+            speedrunner.ironPhase()
     }
 })
 
@@ -163,6 +166,21 @@ speedrunner.bot.on("goal_reached", () =>{
         case "goingToVillage":
             speedrunner.atVillage = true
             break;
+        case "raidingVillage":
+            if(speedrunner.goingToCraft){
+                if (speedrunner.three_stone){
+                    console.log("crafting stone")
+                    setTimeout(() => { speedrunner.craftItem("stone_pickaxe", 1) }, 1000)
+                    setTimeout(() => { speedrunner.mineSixStone()}, 2000)
+                    speedrunner.three_stone = false
+                } else if (speedrunner.six_stone){
+                    setTimeout(() => { speedrunner.craftItem("stone_axe", 1) }, 1000)
+                    setTimeout(() => { this.stone_axe = true; speedrunner.chooseAction()}, 3000)
+                    speedrunner.six_stone = false
+                }
+                this.goingToCraft = false
+            }
+            break
         default:
             break;
     }
@@ -175,6 +193,11 @@ speedrunner.bot.on("physicTick", () => {
         speedrunner.chooseAction()
     }
 
+    switch(speedrunner.state){
+        case "goingToVillage":
+            speedrunner.bot.setControlState("sprint", true)
+            // speedrunner.bot.setControlState("jump", true)
+    }
 })
 
 speedrunner.bot.on("diggingCompleted", () => {

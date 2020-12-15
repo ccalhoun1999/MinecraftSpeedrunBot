@@ -13,7 +13,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 57108,
+            port: 50738,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -29,6 +29,11 @@ class SpeedrunBot{
         //doing an action
         this.doing = false
 
+        //saved crafting table block
+        this.craftingTableLocation = false
+        //moving to craft
+        this.goingToCraft = false
+
         //village section
         this.atVillage = false
 
@@ -42,8 +47,13 @@ class SpeedrunBot{
 
         this.beds = 0
         this.chests = false
+        this.hays = 0
 
-
+        //iron phase
+        this.bread = false
+        this.iron = false
+        this.bucket = false
+        this.flint = false
     }
 
     //state transition
@@ -54,15 +64,15 @@ class SpeedrunBot{
                     this.state = "raidingVillage"
                 break;
             case "raidingVillage":
-                if(this.beds >= 10 && this.chests && this.stone_axe)
-                    this.state = "ironAndFoodPhase"
+                if(this.beds >= 8 && this.chests && this.stone_axe && this.hays >= 8)
+                    this.state = "ironPhase"
                 break;
         }
     }
 
     //priority action
     chooseAction(){
-        console.log("state: " + this.state)
+        //console.log("state: " + this.state)
 
         switch(this.state){
             case "raidingVillage":
@@ -73,28 +83,25 @@ class SpeedrunBot{
                     setTimeout(() => { this.craftItem("crafting_table", 1) }, 3000)
                     setTimeout(() => { this.equipItem("crafting_table", "hand") }, 3500)
                     setTimeout(() => { this.putBlock("crafting_table", this.findPath())}, 4000)
-                    setTimeout(() => { this.craftItem("wooden_pickaxe", 1) }, 6000)
-                    setTimeout(() => { this.mineStone()}, 7000)
+                    setTimeout(() => { this.craftItem("wooden_pickaxe", 1)}, 5500)
+                    setTimeout(() => { this.mineStone()}, 6500)
                     this.wooden_pick = true
                     this.three_wood = false
                 } else if(this.three_stone) {
                     this.doing = true
-                    setTimeout(() => { this.moveToBlock("crafting_table") }, 500)
-                    setTimeout(() => { this.craftItem("stone_pickaxe", 1) }, 10000)
-                    setTimeout(() => { this.mineSixStone()}, 11000)
-                    this.three_stone = false
+                    setTimeout(() => { this.moveToBlock("crafting_table"); this.goingToCraft = true }, 500)
                 } else if (this.six_stone){
                     this.doing = true
-                    setTimeout(() => { this.moveToBlock("crafting_table") }, 1000)
-                    setTimeout(() => { this.craftItem("stone_axe", 1) }, 10000)
-                    setTimeout(() => { this.chooseAction() }, 11000)
-                    this.six_stone = false
-                    this.stone_axe = true
+                    setTimeout(() => { this.moveToBlock("crafting_table"); this.goingToCraft = true }, 500)
                 } else {
                     console.log("choosing to raid village")
+                    this.doing = true
                     this.raidVillage();
                 }
-                break;
+                break
+            case "ironPhase":
+                this.ironPhase()
+                break
         }
     }
 
@@ -119,20 +126,21 @@ class SpeedrunBot{
         this.mcData.blocksByName["brown_bed"].id, this.mcData.blocksByName["green_bed"].id, this.mcData.blocksByName["red_bed"].id, 
         this.mcData.blocksByName["black_bed"].id]
     }
+
+    ironPhase(){
+        console.log(this.craftingTableLocation)
+    }
     
     //raiding village priority queue
     raidVillage(){
-
-        if(!this.doing){
-            this.doing = true
-        }
-
         let wood
         let bed
         let chest
+        let hay
         let woodDist = 64
         let bedDist = 64
         let chestDist = 64
+        let hayDist = 64
 
         if (!this.wooden_pick){
             wood = this.bot.findBlocks({
@@ -141,18 +149,25 @@ class SpeedrunBot{
                 maxDistance: 32,
                 count: 3
             })
-            woodDist = this.distance(wood[0], this.bot.entity.position)
+            if (wood[0] == null){
+                //this.wooden_pick = true
+            } else {
+                woodDist = this.distance(wood[0], this.bot.entity.position)
+            } 
         }
 
-        if (this.beds < 10){
+        if (this.beds < 8){
             bed = this.bot.findBlocks({
                 //all types of beds
                 matching: this.bedArray(),
                 maxDistance: 96
             })
-            bedDist = this.distance(bed[0], this.bot.entity.position)
-
-            //end if beds >= 10
+            if (bed[0] == null){
+                //this.beds = 8;
+            } else {
+                bedDist = this.distance(bed[0], this.bot.entity.position)
+            }
+            //end if beds >= 8
         }
 
         if (!this.chests){
@@ -160,14 +175,27 @@ class SpeedrunBot{
                 matching: this.mcData.blocksByName["chest"].id,
                 maxDistance: 96
             })
-            chestDist = this.distance(chest[0], this.bot.entity.position)
-
-            //ends if no chest within 96 blocks
-            if (chest == null)
-                this.chests = false
+            if (chest[0] == null){
+                this.chests = true
+            } else {
+                chestDist = this.distance(chest[0], this.bot.entity.position)
+            }
         }
 
-        let min = Math.min(woodDist, bedDist, chestDist)
+        if (this.hays < 8){
+            hay = this.bot.findBlocks({
+                //all types of beds
+                matching: this.mcData.blocksByName["hay_block"].id,
+                maxDistance: 96
+            })
+            if (hay[0] == null){
+                //this.hays = 8
+            } else {
+                hayDist = this.distance(hay[0], this.bot.entity.position)
+            }
+        }
+
+        let min = Math.min(woodDist, bedDist, chestDist, hayDist)
 
         switch(min){
             case woodDist:
@@ -181,6 +209,14 @@ class SpeedrunBot{
             case chestDist:
                 console.log("choosing to get chest")
                 setTimeout(() => { this.mineChest(chest, 1) }, 500)
+                break
+            case hayDist:
+                console.log("choosing to get hay")
+                setTimeout(() => { this.mineHay(hay, 1) }, 500)
+                break
+            default:
+                this.transitionState()
+                this.chooseAction()
                 break
         }
     }
@@ -255,6 +291,7 @@ class SpeedrunBot{
                 if (!this.six_stone){
                     this.three_stone = false
                     this.six_stone = true
+                    this.doing = false
                     this.chooseAction()
                 }
             }
@@ -286,6 +323,7 @@ class SpeedrunBot{
                 if (!this.three_stone){
                     this.three_wood = false
                     this.three_stone = true
+                    this.doing = false
                     this.chooseAction()
                 }
             }
@@ -310,6 +348,29 @@ class SpeedrunBot{
                 this.state = this.prevState
                 this.three_wood = true
                 this.doing = false
+                this.chooseAction()
+            }
+        })
+    }
+
+    mineHay(blocks){
+        const targets = []
+        for (let i = 0; i < Math.min(blocks.length); i++) {
+            targets.push(this.bot.blockAt(blocks[i]))
+        }
+      
+        this.bot.collectBlock.collect(targets, err => {
+            if (err) {
+                // An error occurred, report it.
+                this.bot.chat(err.message)
+                console.log(err)
+            } else {
+                // All blocks have been collected.
+                this.bot.chat('Done')
+                this.state = this.prevState
+                ++this.hays
+                this.doing = false
+                console.log("amount of hay" + this.hays)
                 this.chooseAction()
             }
         })
@@ -440,7 +501,6 @@ class SpeedrunBot{
 
         const craftingBlock = this.bot.findBlock({
           matching: craftingTable.id,
-          maxDistance: 64
         })
 
         if (item) {
