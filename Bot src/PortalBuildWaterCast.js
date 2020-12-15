@@ -7,6 +7,7 @@ const Vec3 = require("vec3")
 const csp = require("./csp.js")
 
 exports.buildPortal = buildPortal
+exports.locateLava = locateLava
 
 function buildPortal(bot, mcData){
     //a portal needs 4 scafolding blocks, 12 lava sources, and a bucket of water
@@ -137,18 +138,16 @@ function locateLava(bot, mcData){
     }
     /*
         so, I'm gonna do this with constraint satisfaction
-        what are the variables? Well, there's 6:
-        Border 1 , Border 2, Border 3, Base 1, Base 2, and Border 4
+        what are the variables? Well, there's 8:
+        Border 3, Base 1, Base 2, and Border 4, as well as Ground1-4
+        Don't ask why it's like that
         They look like this:
-        [any]   Border1 Border2 [any]
         Border3 Base1   Base2   Border 4
-        Ground  Ground  Ground  Ground
+        Ground1 Ground2 Ground3 Ground4
         The constraints are that these blocks are:
             Arranged like this
-            Are part of a larger lava pool made of 12 lava
             Are above y=55 (minecraft sea level is 63), to prevent using underground lava lakes
         The last one can be handled without constaint satisfaction
-        The second-to-last one can be solved recusively, probably
         It's the first one the constraint satisfaction is for
         I'm probably gonna solve it that way too
     */
@@ -165,7 +164,6 @@ function locateLava(bot, mcData){
     }
     //first, find all of the lava within the search area
     //  ideally we wouldn't even look below y=55, but we can't do that
-    //      well we can but I'm not sure how
     let lavaPositions = bot.findBlocks({
         matching: mcData.blocksByName.lava.id,
         maxDistance: 64,
@@ -322,7 +320,7 @@ function locateLava(bot, mcData){
         variables: lavaVarsA, 
         constraints: lavaConsX,
     })
-    //if it fails on the x axism try again on the Z
+    //if it fails on the x axis try again on the Z
     if(cr === "FAILURE"){
         console.log("trying z...")
         cr = csp.solve({
