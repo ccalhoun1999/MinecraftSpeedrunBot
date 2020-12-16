@@ -5,6 +5,7 @@ const Movements = require('mineflayer-pathfinder').Movements
 const { GoalXZ, GoalNear, GoalCompositeAny } = require('mineflayer-pathfinder').goals
 const Vec3 = require("vec3")
 const csp = require("./csp.js")
+const delay = t => new Promise(resolve => setTimeout(resolve, t));
 
 exports.buildPortal = buildPortal
 exports.locateLava = locateLava
@@ -114,15 +115,16 @@ function constructionSequence(bot, buildSite){
     //  declaration
     //s stands for 'sequence'
     //place a scafold in 2 
-    const s = placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])//placeScaffold(bot, buildSite[0][1])
+    const s = placeScaffold(bot, buildSite[0][1])
     //place water in 3. This makes 4 obsidian
-    /*.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
+    setTimeout(() => placeLiquid(bot, findInInv(waterBucket), buildSite[0][2]), 2000)
+    //the .then is chaining the above line
     //recollect scafold. The water from 3 will then flow to 2, making 1 obsidian
-    .then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
+    /*.then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
     //recollect water in 3
     .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))
     */
-    .catch(err => console.log("Build failed: " + err))
+    //.catch(err => console.log("Build failed: " + err))
     //dig out the block at 5. Now there's 5 scafold blocks
     //build a 3-high tower on 8.
         //which block does it choose?
@@ -148,6 +150,7 @@ function constructionSequence(bot, buildSite){
         spam-click flint-n-steel until in Nether
         /fill -139 65 -258 -145 69 264 minecraft:air
     */
+    //return s
 }
 
 function locateLava(bot, mcData){
@@ -535,7 +538,7 @@ function placeLiquid(bot, liquid, destination){
     if(!finalFoundation){throw("PLACELIQUID_NOFOUNDATION")}
     
     p = bot.equip(liquid, "hand")
-    .then(bot.lookAt(finalFoundation.position, false, (err) => {
+    .then(bot.lookAt(finalFoundation.position, true, (err) => {
         if(!err){
             console.log("looking at " + bot.blockAtCursor().position)
             bot.activateItem()
@@ -544,6 +547,10 @@ function placeLiquid(bot, liquid, destination){
             console.log(err)
         }
     }))
+    /*.then(delay(20)).finally(() => {
+        bot.chat("liquiding!")
+        bot.activateItem()
+    })*/
     return p
 }
 
@@ -575,6 +582,12 @@ function bucketLiquid(bot, bucket, destination){
         }
     })
 }
+
+/*function delay(t, v) {
+    return new Promise(function(resolve) { 
+        setTimeout(resolve.bind(null, v), t)
+    });
+ }*/
 
 /*//little queue class to make the callbacks easier. Thanks, stackoverflow from 7 years ago!
 //use the promises functionality here https://stackoverflow.com/questions/17528749/semaphore-like-queue-in-javascript
