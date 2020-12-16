@@ -14,7 +14,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 49968,
+            port: 50056,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -309,7 +309,7 @@ class SpeedrunBot{
 
     //kill them golems
     goToIronGolem(iron_golem){
-        let goal = new GoalNear(iron_golem.position.x, iron_golem.position.y+5, iron_golem.position.z, 1)
+        let goal = new GoalNear(iron_golem.position.x, iron_golem.position.y+6, iron_golem.position.z, 2)
         this.bot.pathfinder.setGoal(goal)
     }
 

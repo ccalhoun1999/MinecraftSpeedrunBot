@@ -216,7 +216,7 @@ speedrunner.bot.on("goal_reached", () =>{
         case "ironPhase":
             if (speedrunner.goingToCraft){
                 if (!speedrunner.bread || !speedrunner.bucket){
-                    setTimeout(() => { speedrunner.craftItem("wheat", speedrunner.hays) }, 1000)
+                    speedrunner.craftItem("wheat", speedrunner.hays)
                     setTimeout(() => { speedrunner.craftItem("bread", speedrunner.hays*3); }, 9500)
                     setTimeout(() => { speedrunner.craftItem("bucket", 1) }, 35000)
                     speedrunner.bread = true
@@ -246,7 +246,7 @@ speedrunner.bot.on("goal_reached", () =>{
 //on pickup item
 speedrunner.bot.on("playerCollect", (collector, collected) => {
     // console.log(collector)
-    //console.log(collected)
+    console.log(collected.metadata)
     if (collector == speedrunner.bot.entity){ 
         //iron ingot
         if (collected.metadata[7] != null){
