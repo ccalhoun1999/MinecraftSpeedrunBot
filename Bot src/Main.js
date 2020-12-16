@@ -11,6 +11,7 @@ let mcData
 speedrunner.bot.once("spawn", () =>{
     mcData = require("minecraft-data")(speedrunner.bot.version)
     const movements = new Movements(speedrunner.bot, mcData)
+    movements.scafoldingBlocks.push(mcData.blocksByName["oak_planks"].id)
     speedrunner.bot.pathfinder.setMovements(movements)
 
     speedrunner.mcData = mcData
@@ -48,10 +49,19 @@ speedrunner.bot.on("message", (jsonMsg, position) => {
 speedrunner.bot.on('chat', (username, message) => {
     const args = message.split(' ')
     let amount = null
-    switch(true){
-        //collect a block
-        //syntax: collect [item amount] [item name]
-        case args[0] === 'collect':
+    switch(args[0]){
+        //list inventory in chat
+        //syntax: inventory
+        case "inventory":
+            speedrunner.sayItems()
+            break
+        //locate village and travel there
+        //syntax: village
+        //Pathfinder is also pretty slow, not sure why
+        case "village":
+            speedrunner.bot.chat("/locate village")
+            break
+        case 'collect':
             if (args.length < 2){
                 speedrunner.bot.chat("need item name")
                 break
@@ -66,21 +76,9 @@ speedrunner.bot.on('chat', (username, message) => {
 
             speedrunner.mineBlocks(type, amount)
             break
-        //list inventory in chat
-        //syntax: inventory
-        case args[0] === "inventory":
-            speedrunner.sayItems()
-            break
-        //locate village and travel there
-        //syntax: village
-        //Doesn't work as anticipated yet, goes to the specific coordinates rather than to the border of the village
-        //Pathfinder is also pretty slow, not sure why
-        case args[0] === "village":
-            speedrunner.bot.chat("/locate village")
-            break
         //equip an item in a slot
         //syntax: equip [item name] [slot]
-        case args[0] === "equip":
+        case "equip":
             if (args.length !== 3){
                 speedrunner.bot.chat("need item name and slot")
                 break
@@ -90,7 +88,7 @@ speedrunner.bot.on('chat', (username, message) => {
             break
         //drop an item
         //syntax: toss [item name] [item amount]
-        case args[0] === "toss":
+        case "toss":
             if (args.length < 2){
                 speedrunner.bot.chat("need item name")
                 break
@@ -104,7 +102,7 @@ speedrunner.bot.on('chat', (username, message) => {
             break
         //unequip an item
         //syntax: unequip [slot]
-        case args[0] === "unequip":
+        case "unequip":
             if (args.length < 2){
                 speedrunner.bot.chat("need slot")
                 break
@@ -114,7 +112,7 @@ speedrunner.bot.on('chat', (username, message) => {
             break
         //craft a thing
         //syntax: craft [item name] [item amount]
-        case args[0] === "craft":
+        case "craft":
             if (args.length < 2){
                 speedrunner.bot.chat("need item name")
             }
@@ -126,12 +124,7 @@ speedrunner.bot.on('chat', (username, message) => {
             speedrunner.craftItem(args[1], amount)
             break
         //Doesn't work as anticipated, struggles to place the block
-        case args[0] == "clean_inventory":
-            if (args.length < 2){
-                speedrunner.bot.chat("cleaning_inventory")
-                speedrunner.clearInventory()
-            }
-        case args[0] === "place":
+        case "place":
             if (args.length < 2){
                 speedrunner.bot.chat("need block name")
             }
@@ -151,7 +144,7 @@ speedrunner.bot.on('chat', (username, message) => {
             //speedrunner.putBlock(args[1], speedrunner.bot.blockAtCursor())   
             break
             
-        case args[0] === "move":
+        case "move":
             if (args.length < 2){
                 speedrunner.bot.chat("need block name")
                 break
@@ -159,11 +152,33 @@ speedrunner.bot.on('chat', (username, message) => {
 
             speedrunner.moveToBlock(args[1])
             break
-        case args[0] === "chest":
-            speedrunner.watchChest(false)
+
+        case "ironPhase":
+            speedrunner.stone_axe = true
+            speedrunner.hays = 8
+            speedrunner.beds = 8
+            speedrunner.chests = true
+            speedrunner.bot.chat("in iron phase")
             break
-        case args[0] === "chestminecraft":
-            speedrunner.watchChest(true)
+        case "chooseAction":
+            speedrunner.chooseAction()
+            speedrunner.bot.chat("choosing action")
+            break
+        case "transitionState":
+            speedrunner.transitionState()
+            speedrunner.bot.chat("transition")
+            break
+        case "setState":
+            if (args.length != 2){
+                speedrunner.bot.chat("need state name")
+                break
+            }
+
+            speedrunner.state = args[1]
+            speedrunner.bot.chat("setting state to " + args[1])
+            break
+        case "state":
+            speedrunner.bot.chat("state: " + speedrunner.state)
             break
     }
 })
@@ -171,9 +186,116 @@ speedrunner.bot.on('chat', (username, message) => {
 //on pathfinder goal complete
 speedrunner.bot.on("goal_reached", () =>{
 
+    console.log("goal reached in state: " + speedrunner.state)
+
+    switch(speedrunner.state){
+        case "goingToVillage":
+            speedrunner.atVillage = true
+            break;
+        case "raidingVillage":
+            if(speedrunner.goingToCraft){
+                if (speedrunner.three_wood){
+                    setTimeout(() => { speedrunner.putBlock("crafting_table", speedrunner.findPath())}, 500)
+                    setTimeout(() => { speedrunner.craftItem("wooden_pickaxe", 1)}, 2000)
+                    setTimeout(() => { speedrunner.mineStone()}, 3000)
+                    speedrunner.wooden_pick = true
+                    speedrunner.three_wood = false
+                } else if (speedrunner.three_stone){
+                    console.log("crafting stone")
+                    setTimeout(() => { speedrunner.craftItem("stone_pickaxe", 1) }, 1000)
+                    setTimeout(() => { speedrunner.mineSixStone()}, 2000)
+                    speedrunner.three_stone = false
+                } else if (speedrunner.six_stone){
+                    setTimeout(() => { speedrunner.craftItem("stone_axe", 1) }, 1000)
+                    setTimeout(() => { speedrunner.stone_axe = true; speedrunner.chooseAction()}, 3000)
+                    speedrunner.six_stone = false
+                }
+                speedrunner.goingToCraft = false
+            }
+            break
+        case "ironPhase":
+            if (speedrunner.goingToCraft){
+                if (!speedrunner.bread || !speedrunner.bucket){
+                    speedrunner.craftItem("wheat", speedrunner.hays)
+                    setTimeout(() => { speedrunner.craftItem("bread", speedrunner.hays*3); }, 9500)
+                    setTimeout(() => { speedrunner.craftItem("bucket", 1) }, 35000)
+                    speedrunner.bread = true
+                    speedrunner.bucket = true
+                    //choose action here to get water
+                }
+                speedrunner.goingToCraft = false
+            } else {
+                if (!speedrunner.golem){
+                    setTimeout(() => { speedrunner.equipItem("stone_axe", "hand")}, 200)
+                    setTimeout(() => { speedrunner.attackIronGolem() }, 1000)
+                } else if (speedrunner.iron >= 4){
+                    setTimeout(() => {speedrunner.moveToBlock("crafting_table"); speedrunner.goingToCraft = true}, 1000)
+                } else {
+                    speedrunner.chooseAction()
+                }
+            }
+            break
+        case "doing":
+            speedrunner.doing = false
+            break
+        default:
+            break;
+    }
+})
+
+//on pickup item
+speedrunner.bot.on("playerCollect", (collector, collected) => {
+    // console.log(collector)
+    console.log(collected.metadata)
+    if (collector == speedrunner.bot.entity){ 
+        //iron ingot
+        if (collected.metadata[7] != null){
+            if (collected.metadata[7].itemId == 579){
+                let ironCount
+                if (speedrunner.hasItem("iron_ingot")){
+                    ironCount = speedrunner.hasItem("iron_ingot").count
+                    console.log("ironcount: " + ironCount);
+                    speedrunner.iron += ironCount
+                }
+
+                //if u need more iron go kill more golems
+                if (speedrunner.iron < 4){
+                    speedrunner.golem = false
+                    this.doing = false
+                } else {
+                    speedrunner.golem = true
+                    this.doing = false
+                }
+            } else if (collected.metadata[7].itemId == 646){
+                speedrunner.flint = true
+                speedrunner.doing = false
+            }
+        }
+    }
 })
 
 //every tick
 speedrunner.bot.on("physicTick", () => {
+    if (!speedrunner.doing){
+        speedrunner.transitionState()
+        speedrunner.chooseAction()
+    }
 
+    switch(speedrunner.state){
+        case "goingToVillage":
+            speedrunner.bot.setControlState("sprint", true)
+            break
+            // speedrunner.bot.setControlState("jump", true)
+    }
+})
+
+speedrunner.bot.on("diggingCompleted", () => {
+    console.log("finished getting blocks")
+})
+
+speedrunner.bot.on("entityGone", e => {
+    if (e === speedrunner.iron_golem_target) {
+        speedrunner.iron_golem_target = null;
+        speedrunner.attackIronGolem();
+    }
 })
