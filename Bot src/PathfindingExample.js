@@ -87,9 +87,16 @@ function locateEmeraldBlock () {
 function lavaTest(){
     //l = new lavaBuild.PortalBuildWaterCast()
     mcData = require('minecraft-data')(bot.version)
-    result = lavaBuild.buildPortal(bot, mcData)
+    result = lavaBuild.locateLava(bot, mcData)
     if(result){
-        bot.chat("did it, somehow?")
+        console.log("site found")
+        for(i in result){
+            for(k in result[i]){
+                console.log(result[i][k].name + " at" + result[i][k].position)
+            }
+        }
+        bot.chat("trying build...")
+        lavaBuild.constructionSequence(bot, result)
     }
     else{
         console.log("Build failed")

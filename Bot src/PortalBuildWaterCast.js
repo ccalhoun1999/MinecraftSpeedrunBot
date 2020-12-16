@@ -8,7 +8,7 @@ const csp = require("./csp.js")
 
 exports.buildPortal = buildPortal
 exports.locateLava = locateLava
-exports.constructtionSequence = constructionSequence
+exports.constructionSequence = constructionSequence
 
 function buildPortal(bot, mcData){
     //a portal needs 4 scafolding blocks, 12 lava sources, and a bucket of water
@@ -92,6 +92,15 @@ function buildPortal(bot, mcData){
 }
 
 function constructionSequence(bot, buildSite){
+    const empytBucket = 660
+    const waterBucket = 661
+    const lavaBucket = 622
+    const findInInv = bot.inventory.findInventoryItem
+    const uniResolve = () => {}
+    const uniReject = (err) => {console.log(err)}
+
+    bot.loadPlugin(require('mineflayer-tool').plugin)
+    bot.loadPlugin(require('mineflayer-collectblock').plugin)
     //The portal build goes like this:
     /*  Build plane:
         * means any, L means lava, G means ground
@@ -99,13 +108,18 @@ function constructionSequence(bot, buildSite){
         Lava:    [1 2 3 4]      EAST
         Land:    [5 6 7 8]*/
     //fun fact: block placements are promises. If I can turn
-    //  the bucketting into promises, then this can jut be one fat promise
+    //  the bucketting into promises, then this can just be one fat promise
     //  declaration
-    //place a scafold in 2
-    //place water in 3
-    //recollect scafold
-    //By now, 1, 4, A, and B should all be obsidian
-    //recollect water
+    //s stands for 'sequence'
+    //place a scafold in 2 
+    const s = placeScaffold(bot, buildSite[0][1])
+    //place water in 3. This makes 4 obsidian
+    /*.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
+    //recollect scafold. The water from 3 will then flow to 2, making 1 obsidian
+    .then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
+    //recollect water in 3
+    .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))*/
+    .catch(err => console.log("Build failed: " + err))
     //dig out the block at 5. Now there's 5 scafold blocks
     //build a 3-high tower on 8.
         //which block does it choose?
@@ -129,6 +143,7 @@ function constructionSequence(bot, buildSite){
         Enter portal frame
         look down
         spam-click flint-n-steel until in Nether
+        /fill -139 65 -258 -145 69 264 minecraft:air
     */
 }
 
@@ -406,9 +421,9 @@ function placeScaffold(bot, destination){
         lava: 27
     }
     const validScafolds = {
-        dirt: 3,
-        cobblestone: 4,
-        netherrack: 87
+        dirt: 9,
+        cobblestone: 12,
+        netherrack: 193
     };
     const adjacentFaces=[new Vec3(1,0,0),new Vec3(-1,0,0),new Vec3(0,1,0),new Vec3(0,-1,0),new Vec3(0,0,-1),new Vec3(0,0,1)];
     const zeroVector = new Vec3(0, 0, 0)
@@ -430,26 +445,36 @@ function placeScaffold(bot, destination){
     }
     if(!scaf){throw("PLACESCAFFOLD_NOITEMS")}
 
-    bot.equip(scaf, "hand", (err) => {
-        if(!err){
-            //check each potential face a block could be placed on to get it in the destination block
-            //Stolen this from:
-            //https://github.com/PrismarineJS/mineflayer-scaffold/blob/master/index.js
-            for(i in adjacentFaces){
-                let face = adjacentFaces[i]
-                let checker = destination.position.plus(face).floored()
-                foundation = bot.blockAt(checker)
-                
-                //if there is a block there, place the liquid against that block
-                if(foundation){
-                    bot.chat("placed!")
-                    return bot.placeBlock(foundation, zeroVector.minus(face), null)
-                }
-            }
-            bot.chat("can't place!")
-            throw("PLACESCAFFOLD_NOFOUNDATION")
+    let finalFoundation
+    let finalFace
+    console.log("trying for " + destination.position)
+    for(i in adjacentFaces){
+        let face = adjacentFaces[i]
+        let checker = destination.position.plus(face).floored()
+        foundation = bot.blockAt(checker)
+    
+        //if there is a block there, place the liquid against that block
+        if(foundation){
+            bot.chat("placable!")
+            finalFoundation = foundation
+            finalFace = face
+            console.log("place on " + foundation.position + " on " + face)
+            break
+        }
+    }
+    if(!finalFoundation){throw("PLACESCAFFOLD_NOFOUNDATION")}
+
+    let p = bot.equip(scaf, "hand")
+    p.then(bot.placeBlock(finalFoundation, finalFace), (err) => {
+        if(err){
+            console.log("can't place: " + err)
+        }
+        else{
+            bot.chat("placed!")
         }
     })
+
+    return p
 }
 
 function placeLiquid(bot, liquid, destination){
