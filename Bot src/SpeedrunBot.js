@@ -13,7 +13,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 60307,
+            port: 63651,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -107,12 +107,12 @@ class SpeedrunBot{
                                 "crafting_table",
                                 "stick",
                                 "lava_bucket",
-                                "oak_wood",
-                                "spruce_wood",
-                                "birch_wood",
-                                "jungle_wood",
-                                "acacia_wood",
-                                "dark_oak_wood",
+                                "oak_log",
+                                "spruce_log",
+                                "birch_log",
+                                "jungle_log",
+                                "acacia_log",
+                                "dark_oak_log",
                                 "oak_planks",
                                 "spruce_planks",
                                 "birch_planks",
@@ -134,7 +134,7 @@ class SpeedrunBot{
                     bot.tossStack(item)
                     //bot.chat("tossed" + self.itemToString(item))
                 }
-            }, 100 * i)
+            }, 25 * i)
         }
     }
 
