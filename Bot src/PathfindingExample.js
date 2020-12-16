@@ -114,16 +114,16 @@ function outerTest(){
 }
 
 function lookAtNearestPlayer () {
+    console.log("look...")
     const playerFilter = (entity) => entity.type === 'player'
     const playerEntity = bot.nearestEntity(playerFilter)
     
     if (!playerEntity) return
     
-    let pos = playerEntity.position.offset(0, playerEntity.height, 0)
-    console.log(pos)
+    const pos = playerEntity.position.offset(0, playerEntity.height, 0)
     bot.lookAt(pos)
   }
 
-bot.once('spawn', lavaTest)
-//bot.on('physicTick', lookAtNearestPlayer)
+//bot.once('spawn', () => bot.look(34, 43, false, (err) => console.log("looking..." + err)))
+bot.on('physicTick', lookAtNearestPlayer)
 //bot.once('spawn', lookAtNearestPlayer)
