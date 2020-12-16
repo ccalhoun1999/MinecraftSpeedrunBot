@@ -95,7 +95,9 @@ function constructionSequence(bot, buildSite){
     const empytBucket = 660
     const waterBucket = 661
     const lavaBucket = 622
-    const findInInv = bot.inventory.findInventoryItem
+    const findInInv = function findInvItem(item){
+        return bot.inventory.findInventoryItem(item, null)
+    }
     const uniResolve = () => {}
     const uniReject = (err) => {console.log(err)}
 
@@ -112,13 +114,14 @@ function constructionSequence(bot, buildSite){
     //  declaration
     //s stands for 'sequence'
     //place a scafold in 2 
-    const s = placeScaffold(bot, buildSite[0][1])
+    const s = placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])//placeScaffold(bot, buildSite[0][1])
     //place water in 3. This makes 4 obsidian
     /*.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
     //recollect scafold. The water from 3 will then flow to 2, making 1 obsidian
     .then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
     //recollect water in 3
-    .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))*/
+    .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))
+    */
     .catch(err => console.log("Build failed: " + err))
     //dig out the block at 5. Now there's 5 scafold blocks
     //build a 3-high tower on 8.
@@ -447,25 +450,28 @@ function placeScaffold(bot, destination){
 
     let finalFoundation
     let finalFace
-    console.log("trying for " + destination.position)
+    console.log("trying place for " + destination.position)
     for(i in adjacentFaces){
         let face = adjacentFaces[i]
         let checker = destination.position.plus(face).floored()
         foundation = bot.blockAt(checker)
     
-        //if there is a block there, place the liquid against that block
-        if(foundation){
+        //if there is a block there, place the scaffold against that block
+        //  make sure that block isn't air, water, or lava though. You can't place
+        //  blocks against those.
+        if(foundation && !Object.values(validSpaces).includes(foundation.type)){
             bot.chat("placable!")
             finalFoundation = foundation
-            finalFace = face
-            console.log("place on " + foundation.position + " on " + face)
+            finalFace = zeroVector.minus(face)
+            console.log("place on " + foundation.position + " on " + zeroVector.minus(face))
             break
         }
     }
     if(!finalFoundation){throw("PLACESCAFFOLD_NOFOUNDATION")}
 
     let p = bot.equip(scaf, "hand")
-    p.then(bot.placeBlock(finalFoundation, finalFace), (err) => {
+    .then(bot.lookAt(finalFoundation.position))
+    .then(bot.placeBlock(finalFoundation, finalFace), (err) => {
         if(err){
             console.log("can't place: " + err)
         }
@@ -488,7 +494,13 @@ function placeLiquid(bot, liquid, destination){
         lava: 27
     }
     const adjacentFaces=[new Vec3(1,0,0),new Vec3(-1,0,0),new Vec3(0,1,0),new Vec3(0,-1,0),new Vec3(0,0,-1),new Vec3(0,0,1)];
+    const zeroVector = new Vec3(0, 0, 0)
 
+    //make sure we have a liquid
+    if(!liquid){
+        console.log("No liquid item provided")
+        throw("PLACELIQUID_NOLIQUID")
+    }
     //make sure the liquid we're trying to place is a liquid at all
     if(!Object.values(validLiquids).includes(liquid.type)){
         console.log("Item " + liquid + " (ID: " + liquid.type + ") is not a liquid in a bucket")
@@ -501,27 +513,38 @@ function placeLiquid(bot, liquid, destination){
         throw("PLACELIQUID_NOSPACE")
     }
 
-    return bot.equip(liquid, "hand", (err) => {
-        if(!err){
-            //check each potential face water could be placed on to get it in the destination block
-            for(i in adjacentFaces){
-                let face = adjacentFaces[i]
-                let checker = destination.position.plus(face).floored()
-                foundation = bot.blockAt(checker)
-                
-                //if there is a block there, place the liquid against that block
-                if(foundation){
-                    bot.lookAt(checker, null, () => {
-                        bot.activateItem()
-                    })
-                    bot.chat("Placed!")
-                    return true
-                }
-            }
-            bot.chat("can't place!")
-            return false
+    let finalFoundation
+    let finalFace
+    console.log("trying liquid for " + destination.position)
+    for(i in adjacentFaces){
+        let face = adjacentFaces[i]
+        let checker = destination.position.plus(face).floored()
+        foundation = bot.blockAt(checker)
+    
+        //if there is a block there, place the scaffold against that block
+        //  make sure that block isn't air, water, or lava though. You can't place
+        //  blocks against those.
+        if(foundation && !Object.values(validSpaces).includes(foundation.type)){
+            bot.chat("placable!")
+            finalFoundation = foundation
+            finalFace = zeroVector.minus(face)
+            console.log("liquid on " + foundation.position + " on " + zeroVector.minus(face))
+            break
         }
-    })
+    }
+    if(!finalFoundation){throw("PLACELIQUID_NOFOUNDATION")}
+    
+    p = bot.equip(liquid, "hand")
+    .then(bot.lookAt(finalFoundation.position, false, (err) => {
+        if(!err){
+            console.log("looking at " + bot.blockAtCursor().position)
+            bot.activateItem()
+        }
+        else{
+            console.log(err)
+        }
+    }))
+    return p
 }
 
 function bucketLiquid(bot, bucket, destination){

@@ -3,6 +3,7 @@ const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const GoalFollow = goals.GoalFollow
 const GoalBlock = goals.GoalBlock
 const lavaBuild = require('./PortalBuildWaterCast.js')
+const Vec3 = require("vec3")
 
 const bot = mineflayer.createBot({
     host: 'localhost',
@@ -103,4 +104,26 @@ function lavaTest(){
     }
 }
 
-bot.once('spawn', lavaTest)
+function outerTest(){
+    //let placeBlock = bot.blockAt(new Vec3(-140, 64, -261))
+    //bot.placeBlock(placeBlock, new Vec3(0, 1, 0))
+    bot.lookAt(new Vec3(-141, 64, -261), false, (err) => {
+        bot.activateItem()
+        bot.chat("Done!")
+    })
+}
+
+function lookAtNearestPlayer () {
+    console.log("look...")
+    const playerFilter = (entity) => entity.type === 'player'
+    const playerEntity = bot.nearestEntity(playerFilter)
+    
+    if (!playerEntity) return
+    
+    const pos = playerEntity.position.offset(0, playerEntity.height, 0)
+    bot.lookAt(pos)
+  }
+
+//bot.once('spawn', () => bot.look(34, 43, false, (err) => console.log("looking..." + err)))
+bot.on('physicTick', lookAtNearestPlayer)
+//bot.once('spawn', lookAtNearestPlayer)
