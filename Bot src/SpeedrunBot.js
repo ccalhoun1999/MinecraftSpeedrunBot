@@ -9,12 +9,13 @@ const { Vec3 } = require('vec3')
 const GoalXZ = goals.GoalXZ
 const GoalGetToBlock = goals.GoalGetToBlock
 const GoalNear = goals.GoalNear
+const GoalBlock = goals.GoalBlock
 
 class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 50056,
+            port: 51167,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -30,6 +31,8 @@ class SpeedrunBot{
         this.prevState = "goingToVillage"
         //doing an action
         this.doing = false
+        //index of arrays
+        this.index = 0
 
         //moving to craft
         this.goingToCraft = false
@@ -50,15 +53,29 @@ class SpeedrunBot{
         this.hays = 0
 
         //iron phase
+        this.dirt = 0
+
         this.golem = false
         //actual iron golem being attacked
         this.iron_golem_target
         this.iron = 0
+        this.goingToGolem = false
+
+        this.goingToIron = false
+        this.goingToFlint = false
 
         //crafting stuff
         this.bread = false
         this.bucket = false
+
+        //gravel
+        this.placeGravelHere
+        this.gravel = false
         this.flint = false
+
+        //water stuff
+        this.waterBlock
+        this.gettingWater = false
         this.water = false
     }
 
@@ -77,6 +94,12 @@ class SpeedrunBot{
                 if(this.beds >= 8 && this.chests && this.stone_axe && this.hays >= 8)
                     this.state = "ironPhase"
                 break;
+            case "ironPhase":
+                if (this.flint && this.water && this.bread){
+                    this.clearInventory()
+                    setTimeout(() => { this.state = "locateLava"; }, 1500)
+                }
+                    
         }
     }
 
@@ -107,26 +130,107 @@ class SpeedrunBot{
                 }
                 break
             case "ironPhase":
-                if (!this.golem){
+                if (this.dirt < 20){
+                    this.doing = true
+                    this.mineDirt()
+                } else if (!this.golem){
                     console.log("on iron phase now")
                     this.ironPhase()
                     //get enough iron and the go to crafting table and make bread and bucket
                 } else if (this.iron < 4){
                     this.ironPhase()
-                } else if (this.bread && this.bucket){
+                } else if (this.bread && this.bucket && !this.water){
                     this.getWater()
-                } else if (!this.water){
+                } else if (this.water && !this.gravel){
+                    this.doing = true
                     this.findGravel()
-                } else if (!this.flint){
-                    setTimeout(() => { this.craftBasic("flint_and_steel", 1) }, 1000)
                 } else if (this.flint){
-                   //keep breaking gravel till you get flint
-                } else {
-                    //locate lava pool
+                    setTimeout(() => { this.craftBasic("flint_and_steel", 1) }, 500)
+                    setTimeout(() => { this.transitionState() }, 1000)
+                } else if (!this.flint){
+                    if (this.hasItem("gravel")){
+                        setTimeout(() => {
+                            console.log("going to place gravel block")
+                            let path = this.findPath(); 
+                            let goal = new GoalNear(path.position.x, path.position.y, path.position.z, 2); 
+                            this.bot.pathfinder.setGoal(goal); 
+                            this.goingToCraft = true
+                        }, 1000)
+                    }
                 }
                 break
             case "lavaPhase":
                 break
+        }
+    }
+
+    clearInventory () {
+        let essentials = [      "wooden_pickaxe",
+                                "stone_pickaxe",
+                                "iron_pickaxe",
+                                "stone_axe",
+                                "stone_hoe",
+                                "bucket",
+                                "water_bucket",
+                                "bread",
+                                "hay_block",
+                                "wheat",
+                                "cobblestone",
+                                "crafting_table",
+                                "stick",
+                                "lava_bucket",
+                                "dirt",
+                                "oak_log",
+                                "spruce_log",
+                                "birch_log",
+                                "jungle_log",
+                                "acacia_log",
+                                "dark_oak_log",
+                                "oak_planks",
+                                "spruce_planks",
+                                "birch_planks",
+                                "jungle_planks",
+                                "acacia_planks",
+                                "dark_oak_planks",
+                                "flint_and_steel",
+                                "white_bed",
+                                "orange_bed",
+                                "magenta_bed", 
+                                "light_blue_bed",
+                                "yellow_bed",
+                                "lime_bed", 
+                                "pink_bed", 
+                                "gray_bed", 
+                                "light_gray_bed", 
+                                "cyan_bed", 
+                                "purple_bed", 
+                                "blue_bed", 
+                                "brown_bed",
+                                "green_bed",
+                                "red_bed", 
+                                "black_bed"
+
+                            ]
+        let inv = this.bot.inventory.items()
+        for (var i = 0, size = inv.length; i < size; i++){
+            toss(essentials, inv, i, this.bot, this)
+        }
+        this.sayItems()
+
+        function toss(essentials, inv, i, bot, self) {
+            setTimeout(function() {
+                var item = inv[i]
+                //bot.chat(item.name)
+                if (essentials.indexOf(item.name) == -1) {
+                    bot.tossStack(item)
+                    //bot.chat("tossed" + self.itemToString(item))
+                }
+            }, 50 * i)
+        }
+    }
+
+    check (essentials, item) {
+        if (essentials.indexOf(item) == -1) {
         }
     }
 
@@ -268,54 +372,62 @@ class SpeedrunBot{
 
     //water
     getWater(){
-        this.water = true
+        this.gettingWater = true
+        let waterBlocks = this.bot.findBlocks({
+            matching: this.mcData.blocksByName["water"].id,
+            maxDistance: 128,
+            count: 10
+        })
+
+        if (waterBlocks[0] != null){
+            let goal = new GoalBlock(waterBlocks[0].x, waterBlocks[0].y, waterBlocks[0].z)
+            this.bot.pathfinder.setGoal(goal)
+            this.waterBlock = waterBlocks[0]
+        }
     }
 
     //collect 5 gravel
     findGravel(){
-        const blockType = this.mcData.blocksByName["gravel"]
-
-        let count = 5
+        this.bot.chat("finding gravel")
+        const gravelType = this.mcData.blocksByName["gravel"]
       
-        const blocks = this.bot.findBlocks({
-            matching: blockType.id,
+        const gravel = this.bot.findBlock({
+            matching: gravelType.id,
             maxDistance: 128,
-            count: count
         })
-      
-        if (blocks.length === 0) {
-            this.bot.chat("I don't see that block nearby.")
-            return
-        }
-      
-        const targets = []
-        for (let i = 0; i < Math.min(blocks.length, count); i++) {
-            targets.push(this.bot.blockAt(blocks[i]))
-        }
-      
-        //this.bot.chat(`Found ${targets.length} ${blockType}(s)`)
-      
-        this.bot.collectBlock.collect(targets, err => {
-            if (err) {
-                // An error occurred, report it.
-                this.bot.chat(err.message)
-                console.log(err)
-            } else {
-                // All blocks have been collected.
-                this.bot.chat('Done')
+
+        if (gravel != null){
+            if (gravel.position.y > 59){
+                const targets = []
+                targets.push(gravel)
+
+                this.bot.collectBlock.collect(targets, err => {
+                    if (err) {
+                        // An error occurred, report it.
+                        this.bot.chat(err.message)
+                        console.log(err)
+                    } else {
+                        // All blocks have been collected.
+                        this.bot.chat('got the gravel')
+                        this.gravel = true
+                        this.goingToFlint = true
+                        this.chooseAction()
+                    }
+                })
             }
-        })
+        }
     }
 
     //kill them golems
     goToIronGolem(iron_golem){
-        let goal = new GoalNear(iron_golem.position.x, iron_golem.position.y+6, iron_golem.position.z, 2)
+        let goal = new GoalGetToBlock(iron_golem.position.x, iron_golem.position.y+5, iron_golem.position.z)
         this.bot.pathfinder.setGoal(goal)
+        this.goingToGolem = true
     }
 
     attackIronGolem(){
         if (this.iron_golem_target != null){
-            if (this.distance(this.iron_golem_target.position, this.bot.entity.position) > 5.5){
+            if (this.distance(this.iron_golem_target.position, this.bot.entity.position) > 6.5){
                 this.goToIronGolem(this.iron_golem_target)
             } else {
                 console.log("attacking golem")
@@ -333,9 +445,11 @@ class SpeedrunBot{
             if (iron != null){
                 let goal = new GoalGetToBlock(iron.position.x, iron.position.y, iron.position.z)
                 setTimeout(() => {this.bot.pathfinder.setGoal(goal)}, 1300)
+                this.goingToIron = true
             }
 
             this.golem = true
+            this.goingToGolem = false
 
             // this.transitionState()
             // this.chooseAction()
@@ -517,39 +631,27 @@ class SpeedrunBot{
                 this.state = this.prevState
                 ++this.beds
                 console.log("amount of beds" + this.beds)
-                // setTimeout(() => {this.doing = false}, 200)
-                this.transitionState(); 
-                this.chooseAction()
+                setTimeout(() => {this.transitionState(); this.chooseAction()}, 500)
             }
         })
     }
 
-    //mine blocks
-    mineBlocks(block, count) {
-        const blockType = this.mcData.blocksByName[block]
-        if (!blockType) {
-            this.bot.chat(`"I don't know any blocks named ${block}.`)
-            return
-        }
-      
+    dirtArray(){
+        return [this.mcData.blocksByName["dirt"].id, this.mcData.blocksByName["grass_block"].id, this.mcData.blocksByName["grass_path"].id]
+    }
+
+    mineDirt(){
         const blocks = this.bot.findBlocks({
-            matching: blockType.id,
+            matching: this.dirtArray(),
             maxDistance: 128,
-            count: count
+            count: 20
         })
-      
-        if (blocks.length === 0) {
-            this.bot.chat("I don't see that block nearby.")
-            return
-        }
-      
+        
         const targets = []
-        for (let i = 0; i < Math.min(blocks.length, count); i++) {
+        for (let i = 0; i < Math.min(blocks.length, 20); i++) {
             targets.push(this.bot.blockAt(blocks[i]))
         }
-      
-        //this.bot.chat(`Found ${targets.length} ${blockType}(s)`)
-      
+        
         this.bot.collectBlock.collect(targets, err => {
             if (err) {
                 // An error occurred, report it.
@@ -558,6 +660,8 @@ class SpeedrunBot{
             } else {
                 // All blocks have been collected.
                 this.bot.chat('Done')
+                this.dirt = 20
+                this.chooseAction()
             }
         })
     }

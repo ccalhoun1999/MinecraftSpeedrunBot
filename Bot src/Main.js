@@ -11,7 +11,7 @@ let mcData
 speedrunner.bot.once("spawn", () =>{
     mcData = require("minecraft-data")(speedrunner.bot.version)
     const movements = new Movements(speedrunner.bot, mcData)
-    movements.scafoldingBlocks.push(mcData.blocksByName["oak_planks"].id)
+    movements.scafoldingBlocks.push(mcData.blocksByName.cobblestone.id)
     speedrunner.bot.pathfinder.setMovements(movements)
 
     speedrunner.mcData = mcData
@@ -154,10 +154,6 @@ speedrunner.bot.on('chat', (username, message) => {
             break
 
         case "ironPhase":
-            speedrunner.stone_axe = true
-            speedrunner.hays = 8
-            speedrunner.beds = 8
-            speedrunner.chests = true
             speedrunner.bot.chat("in iron phase")
             break
         case "chooseAction":
@@ -179,6 +175,38 @@ speedrunner.bot.on('chat', (username, message) => {
             break
         case "state":
             speedrunner.bot.chat("state: " + speedrunner.state)
+            break
+        case "getWater":
+            speedrunner.bot.chat("getting water")
+            speedrunner.stone_axe = true
+            speedrunner.hays = 8
+            speedrunner.beds = 8
+            speedrunner.chests = true
+            speedrunner.iron = 5
+            speedrunner.golem = true
+            speedrunner.bucket = true
+            speedrunner.bread = true
+            speedrunner.dirt = 20
+            speedrunner.state = "ironPhase"
+            speedrunner.doing = true
+            speedrunner.getWater()
+            break
+        case "getFlint":
+            speedrunner.bot.chat("getting flint")
+            speedrunner.stone_axe = true
+            speedrunner.hays = 8
+            speedrunner.beds = 8
+            speedrunner.chests = true
+            speedrunner.iron = 5
+            speedrunner.golem = true
+            speedrunner.bucket = true
+            speedrunner.bread = true
+            speedrunner.water = true
+            speedrunner.dirt = 20
+            speedrunner.state = "ironPhase"
+            break
+        case "clearInv":
+            speedrunner.clearInventory()
             break
     }
 })
@@ -221,15 +249,53 @@ speedrunner.bot.on("goal_reached", () =>{
                     setTimeout(() => { speedrunner.craftItem("bucket", 1) }, 35000)
                     speedrunner.bread = true
                     speedrunner.bucket = true
-                    //choose action here to get water
+                    setTimeout(() => { speedrunner.chooseAction() }, 36000)
+                } else if (speedrunner.gravel && !speedrunner.flint) {
+                    speedrunner.placeGravelHere = speedrunner.findPath()
+                    speedrunner.putBlock("gravel", speedrunner.placeGravelHere)
+                    setTimeout(() => { speedrunner.findGravel() }, 1000)
                 }
                 speedrunner.goingToCraft = false
             } else {
-                if (!speedrunner.golem){
+                if (!speedrunner.golem && speedrunner.goingToGolem){
                     setTimeout(() => { speedrunner.equipItem("stone_axe", "hand")}, 200)
                     setTimeout(() => { speedrunner.attackIronGolem() }, 1000)
-                } else if (speedrunner.iron >= 4){
-                    setTimeout(() => {speedrunner.moveToBlock("crafting_table"); speedrunner.goingToCraft = true}, 1000)
+                    speedrunner.goingToGolem = false
+                } else if (speedrunner.gettingWater){ 
+                    speedrunner.equipItem("bucket", "hand")
+                    setTimeout(() => { speedrunner.bot.lookAt(speedrunner.waterBlock, true, ()=> {
+                        console.log("putting water in bucket now")
+                        setTimeout(() => { speedrunner.bot.activateItem(); speedrunner.water = true }, 500)
+                    }) }, 1000)
+                    speedrunner.gettingWater = false
+                    setTimeout(() => { speedrunner.chooseAction() }, 2000)
+                } else if (speedrunner.goingToIron) {
+                    console.log("got iron")
+                    let ironCount
+                    if (speedrunner.hasItem("iron_ingot")){
+                        ironCount = speedrunner.hasItem("iron_ingot").count
+                        console.log("ironcount: " + ironCount);
+                        speedrunner.iron += ironCount
+                    }
+
+                    //if u need more iron go kill more golems
+                    if (speedrunner.iron < 4){
+                        speedrunner.golem = false
+                        speedrunner.doing = false
+                    } else {
+                        speedrunner.golem = true
+                        setTimeout(() => {speedrunner.moveToBlock("crafting_table"); speedrunner.goingToCraft = true}, 1000)
+                    }
+
+                    speedrunner.goingToIron = false
+                } else if (speedrunner.goingToFlint) {
+                    if(speedrunner.hasItem("flint")){
+                        speedrunner.bot.chat("got flint")
+                        speedrunner.flint = true
+                        // speedrunner.doing = false
+                        speedrunner.chooseAction()
+                    }
+                    speedrunner.goingToFlint = false
                 } else {
                     speedrunner.chooseAction()
                 }
@@ -240,37 +306,6 @@ speedrunner.bot.on("goal_reached", () =>{
             break
         default:
             break;
-    }
-})
-
-//on pickup item
-speedrunner.bot.on("playerCollect", (collector, collected) => {
-    // console.log(collector)
-    console.log(collected.metadata)
-    if (collector == speedrunner.bot.entity){ 
-        //iron ingot
-        if (collected.metadata[7] != null){
-            if (collected.metadata[7].itemId == 579){
-                let ironCount
-                if (speedrunner.hasItem("iron_ingot")){
-                    ironCount = speedrunner.hasItem("iron_ingot").count
-                    console.log("ironcount: " + ironCount);
-                    speedrunner.iron += ironCount
-                }
-
-                //if u need more iron go kill more golems
-                if (speedrunner.iron < 4){
-                    speedrunner.golem = false
-                    this.doing = false
-                } else {
-                    speedrunner.golem = true
-                    this.doing = false
-                }
-            } else if (collected.metadata[7].itemId == 646){
-                speedrunner.flint = true
-                speedrunner.doing = false
-            }
-        }
     }
 })
 
