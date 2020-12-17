@@ -98,8 +98,6 @@ function constructionSequence(bot, buildSite){
     const findInInv = function findInvItem(item){
         return bot.inventory.findInventoryItem(item, null)
     }
-    const uniResolve = () => {}
-    const uniReject = (err) => {console.log(err)}
 
     bot.loadPlugin(require('mineflayer-tool').plugin)
     bot.loadPlugin(require('mineflayer-collectblock').plugin)
@@ -114,15 +112,43 @@ function constructionSequence(bot, buildSite){
     //  declaration
     //s stands for 'sequence'
     //place a scafold in 2 
-    const s = placeScaffold(bot, buildSite[0][1])
-    //place water in 3. This makes 4 obsidian
+    /*const s = placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])
+    .catch(err => console.log("Build failed: " + err))*/
+    let steps = [
+        //place a scafold in 2 
+        new SiteTask("scaffold", bot, null, buildSite[0][1]),
+        new SiteTask("delay"),
+        //place water in 3. This makes 4 obsidian
+        new SiteTask("liquid", bot, findInInv(waterBucket), buildSite[0][2]),
+        new SiteTask("delay"),
+        //recollect scafold. The water from 3 will then flow to 2, making 1 obsidian
+        new SiteTask("break", bot, null, buildSite[0][1]),
+        new SiteTask("delay"),
+        //recollect water in 3
+        new SiteTask("bucket", bot, findInInv(empytBucket), buildSite[0][2]),
+        new SiteTask("delay"),
+    ]
+    
+    /*
+        this is the money maker. It allows us to sequentially
+        execute promises (because they apparently couldn't do that
+        already). Reduce gives us a promise to execute, and the loop keeps
+        going until everything's done, while only starting new promises
+        when old ones stop being pending
+        Got it from here: https://css-tricks.com/why-using-reduce-to-sequentially-resolve-promises-works/
+    */
+    steps.reduce( (previousPromise, nextStep) => {
+        return previousPromise.then(() => {
+          return doBuildTask(nextStep);
+        }).catch(err => console.log(err));
+      }, Promise.resolve());
     //.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
-    //recollect scafold. The water from 3 will then flow to 2, making 1 obsidian
+    
     /*.then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
     //recollect water in 3
     .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))
     */
-    .catch(err => console.log("Build failed: " + err))
+    
     //dig out the block at 5. Now there's 5 scafold blocks
     //build a 3-high tower on 8.
         //which block does it choose?
@@ -148,7 +174,6 @@ function constructionSequence(bot, buildSite){
         spam-click flint-n-steel until in Nether
         /fill -139 65 -258 -145 69 264 minecraft:air
     */
-   return s
 }
 
 function locateLava(bot, mcData){
@@ -418,6 +443,17 @@ function blocksNotTheSame(blockOne, blockTwo){
     return blockOne !== blockTwo
 }
 
+//theory: if the bot looks at a face, but that face's oppisite
+//  is closer, the bot can't actually see the face
+//If this returns true, the provided face is closer, and thus
+//  shouldn't be blocked by the block it's on
+function isOppisiteFarther(bot, face){
+    let pos = bot.entity.position
+    let fce = pos.plus(face)
+    let opp = pos.minus(face)
+    return pos.manhattanDistanceTo(fce) < pos.manhattanDistanceTo(opp)
+}
+
 function placeScaffold(bot, destination){
     const validSpaces = {
         air: 0,
@@ -461,17 +497,30 @@ function placeScaffold(bot, destination){
         //  make sure that block isn't air, water, or lava though. You can't place
         //  blocks against those.
         if(foundation && !Object.values(validSpaces).includes(foundation.type)){
-            bot.chat("placable!")
             finalFoundation = foundation
             finalFace = zeroVector.minus(face)
-            console.log(`place on ${foundation.name}: ${foundation.position} on ${zeroVector.minus(face)}`)
+            console.log(`place on ${foundation.name}: ${foundation.position} on ${zeroVector.minus(face)}?`)
             break
         }
     }
     if(!finalFoundation){throw("PLACESCAFFOLD_NOFOUNDATION")}
 
-    let s = bot.equip(scaf, "hand")
-    let p = s
+    //I am praying that the outermost promise doesn't resolve
+    //until the interior ones do
+    //They do so I guess  we just live in callback hell
+    let s = bot.equip(scaf, "hand", () => {
+        bot.lookAt(finalFoundation.position, true, () => {
+            bot.placeBlock(finalFoundation, finalFace, (err) => {
+                if(err){
+                    console.log("can't place: " + err)
+                }
+                else{
+                    bot.chat("placed!")
+                }
+            })
+        })
+    })
+    /*let p = s
     .then(bot.lookAt(finalFoundation.position))
     .then(bot.placeBlock(finalFoundation, finalFace), (err) => {
         if(err){
@@ -481,9 +530,9 @@ function placeScaffold(bot, destination){
             bot.chat("placed!")
         }
     })
-    .catch(err => console.log("Build failed: " + err))
+    .catch(err => console.log("Build failed: " + err))*/
 
-    return p
+    return s
 }
 
 function placeLiquid(bot, liquid, destination){
@@ -530,22 +579,24 @@ function placeLiquid(bot, liquid, destination){
         if(foundation && !Object.values(validSpaces).includes(foundation.type)){
             finalFoundation = foundation
             finalFace = zeroVector.minus(face)
-            console.log("liquid on " + foundation.position + " on " + zeroVector.minus(face))
+            console.log(`liquid on ${foundation.position} on ${zeroVector.minus(face)} (${finalFoundation.position.plus(finalFace)}?`)
             break
         }
     }
     if(!finalFoundation){throw("PLACELIQUID_NOFOUNDATION")}
     
-    p = bot.equip(liquid, "hand")
-    .then(bot.lookAt(finalFoundation.position, false, (err) => {
-        if(!err){
-            console.log("looking at " + bot.blockAtCursor().position)
-            bot.activateItem()
-        }
-        else{
-            console.log(err)
-        }
-    }))
+    p = bot.equip(liquid, "hand", () => {
+        bot.lookAt(finalFoundation.position.plus(finalFace), false, (err) => {
+            if(!err){
+                console.log("   looking at " + bot.blockAtCursor().position)
+                bot.activateItem()
+                bot.chat("Liquided!")
+            }
+            else{
+                throw err
+            }
+        })
+    })
     return p
 }
 
@@ -569,57 +620,77 @@ function bucketLiquid(bot, bucket, destination){
 
     return bot.equip(bucket, "hand", (err) => {
         if(!err){
-            bot.lookAt(checker, null, () => {
-                bot.activateItem()
+            bot.lookAt(destination.position, null, (err) => {
+                if(!err){
+                    console.log(`bucket on ${destination.position}?`)
+                    bot.activateItem()
+                    bot.chat("Bucketed!")
+                }
+                else{
+                    throw err
+                }
             })
-            bot.chat("Placed!")
             return true
         }
     })
 }
 
-/*//little queue class to make the callbacks easier. Thanks, stackoverflow from 7 years ago!
-//use the promises functionality here https://stackoverflow.com/questions/17528749/semaphore-like-queue-in-javascript
-class Queue {  
-    constructor(autorun = true, queue = []) {
-      .running = false;
-      .autorun = autorun;
-      .queue = queue;
+//for high-efficiancy digging
+function digScaffold(bot, destination){
+    console.log(`dig on ${destination.name}: ${destination.position}?`)
+    bot.tool.equipForBlock(destination)
+    return bot.dig(destination, (err) => {
+        if(!err){
+            bot.chat("Digged!")
+        }
+        else{
+            throw err
+        }
+    })
+}
+
+//for injecting time delays into the bot so it can
+//catch up with itself
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+function doBuildTask(siteTask){
+    const timeBetweenTasks = 1000
+    let s = siteTask
+    let task
+    switch(s.command){
+        case "scaffold":
+            task = placeScaffold(s.bot, s.destination)
+            break;
+        case "break":
+            //task = digScaffold(s.bot, s.destination)
+            task = digScaffold.bot, s.destination
+            //task = s.bot.collectBlock.collect(s.destination)
+            break;
+        case "liquid":
+            task = placeLiquid(s.bot, s.item, s.destination)
+            break;
+        case "bucket":
+            task = bucketLiquid(s.bot, s.item, s.destination)
+            break;
+        case "delay":
+            task = delay(timeBetweenTasks)
+            break;
+        default:
+            console.log(`No matching task for ${s.command}`)
+            task = null
+            break
     }
-  
-    add(cb) {
-      .queue.push((value) => {
-          const finished = new Promise((resolve, reject) => {
-          const callbackResponse = cb(value);
-  
-          if (callbackResponse !== false) {
-              resolve(callbackResponse);
-          } else {
-              reject(callbackResponse);
-          }
-        });
-  
-        finished.then(.dequeue.bind(), (() => {}));
-      });
-  
-      if (.autorun && !.running) {
-          .dequeue();
-      }
-  
-      return ;
+    return task
+}
+
+//Easy object constructor for holding data needed for each step of the build
+class SiteTask{
+    constructor(command, bot, item, destination){
+        this.command = command
+        this.bot = bot
+        this.item = item
+        this.destination = destination
     }
-  
-    dequeue(value) {
-      .running = .queue.shift();
-  
-      if (.running) {
-          .running(value);
-      }
-  
-      return .running;
-    }
-  
-    get next() {
-      return .dequeue;
-    }
-  }*/
+}
