@@ -91,13 +91,24 @@ function buildPortal(bot, mcData){
     Promise.all(gathers).then(findLava(bot, mcData))
 }
 
-function constructionSequence(bot, buildSite){
-    const empytBucket = 660
+function constructionSequence(bot, BuildSite){
+    const emptyBucket = 660
     const waterBucket = 661
     const lavaBucket = 622
+    const lavaBlock = 27
     const findInInv = function findInvItem(item){
         return bot.inventory.findInventoryItem(item, null)
     }
+    const yOffset = function offsetYCoord(block, offset){
+        return bot.blockAt(block.position.offset(0, offset, 0))
+    }
+    const nearestLava = function findClosestLava(bot){
+        return bot.findBlock({
+            matching: lavaBlock,
+            maxDistance: 32
+        })
+    }
+    let buildSite = BuildSite
 
     bot.loadPlugin(require('mineflayer-tool').plugin)
     bot.loadPlugin(require('mineflayer-collectblock').plugin)
@@ -125,9 +136,80 @@ function constructionSequence(bot, buildSite){
         new SiteTask("break", bot, null, buildSite[0][1]),
         new SiteTask("delay"),
         //recollect water in 3
-        new SiteTask("bucket", bot, findInInv(empytBucket), buildSite[0][2]),
+        new SiteTask("bucket", bot, findInInv(emptyBucket), buildSite[0][2]),
         new SiteTask("delay"),
-    ]
+        //dig out the block at 5
+        new SiteTask("break", bot, null, buildSite[1][0]),
+        new SiteTask("delay"),
+        //build a 3-high tower on 8.
+        new SiteTask("scaffold", bot, null, yOffset(buildSite[1][3], 1)),
+        new SiteTask("delay"),
+        //which block does it choose?
+        //1 above
+        new SiteTask("scaffold", bot, null, yOffset(buildSite[1][3], 2)),
+        new SiteTask("delay"),
+        //2 above
+        new SiteTask("scaffold", bot, null, yOffset(buildSite[1][3], 3)),
+        new SiteTask("delay"),
+        //add an overhang scafold at that height over 4
+        new SiteTask("scaffold", bot, null, yOffset(buildSite[0][3], 3)),
+        new SiteTask("delay"),
+        //place a scafold on 6
+        new SiteTask("scaffold", bot, null, yOffset(buildSite[1][1], 1)),
+        new SiteTask("delay"),
+        //place water next to the tower's highest block on 7
+        new SiteTask("liquid", bot, findInInv(waterBucket), yOffset(buildSite[1][2], 3)),
+        new SiteTask("delay"),
+        //place lava on 1
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][0], 1)),
+        new SiteTask("delay"),
+        //place lava on 4
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][3], 1)),
+        new SiteTask("delay"),
+        //place lava on 1 again
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][0], 2)),
+        new SiteTask("delay"),
+        //place lava on 4 again
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][3], 2)),
+        new SiteTask("delay"),
+        //place lava on 3 (using the scafold block above 4)
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][2], 3)),
+        new SiteTask("delay"),
+        //place lava on 2 (using the previously made block)
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][1], 3)),
+        new SiteTask("delay"),
+        //remove water
+        new SiteTask("build", bot, null, yOffset(buildSite[1][2], 3)),
+        new SiteTask("delay"),
+        //dig out 2
+        new SiteTask("break", bot, null, yOffset(buildSite[0][1], -1)),
+        new SiteTask("delay"),
+        //dig out 3
+        new SiteTask("break", bot, null, yOffset(buildSite[0][2], -1)),
+        new SiteTask("delay"),
+        //lava 2
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][1], -1)),
+        new SiteTask("delay"),
+        //lava 3
+        new SiteTask("bucket", bot, findInInv(emptyBucket), nearestLava(bot)),
+        new SiteTask("delay"),
+        new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][2], -1)),
+        new SiteTask("delay"),
+    ]   //done?
     
     /*
         this is the money maker. It allows us to sequentially
@@ -139,42 +221,11 @@ function constructionSequence(bot, buildSite){
     */
     steps.reduce( (previousPromise, nextStep) => {
         return previousPromise.then(() => {
-            refreshBuildSite(bot, buildSite)
+            buildSite = refreshBuildSite(bot, buildSite)
             return doBuildTask(nextStep);
         }).catch(err => console.log(err));
-      }, Promise.resolve());
-    //.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
+      }, Promise.resolve());   
     
-    /*.then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
-    //recollect water in 3
-    .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))
-    */
-    
-    //dig out the block at 5. Now there's 5 scafold blocks
-    //build a 3-high tower on 8.
-        //which block does it choose?
-    //1 above
-    //2 above
-    //add an overhang scafold at that height over 4
-    //place a scafold on 6
-    //place water next to the tower's highest block on 7
-    /*
-        
-        As Fast As Possible:
-        place lava on 1
-        place lava on 4
-        place lava on 1
-        place lava on 4
-        place lava on 3 (using the scafold block above 4)
-        place lava on 2 (using the previously made block)
-        recollect water
-        VERY QUICKLY, dig out 2 and 3. Place lava in both
-            the portal is now complete
-        Enter portal frame
-        look down
-        spam-click flint-n-steel until in Nether
-        /fill -139 65 -258 -145 69 264 minecraft:air
-    */
 }
 
 function locateLava(bot, mcData){
@@ -602,7 +653,7 @@ function placeLiquid(bot, liquid, destination){
     p = bot.equip(liquid, "hand", () => {
         bot.lookAt(finalFoundation.position.plus(finalFace), false, (err) => {
             if(!err){
-                console.log("   looking at " + bot.blockAtCursor().position)
+                if(bot.blockAtCursor()){console.log("   looking at " + bot.blockAtCursor().position)}
                 bot.activateItem()
                 bot.chat("Liquided!")
             }
@@ -684,12 +735,19 @@ function delay(ms) {
 
 //update the blocks in the buildsite after every task is complete
 function refreshBuildSite(bot, buildSite){
-    for(i in buildSite){
+    let r = function r(block){
+        return bot.blockAt(block.position)
+    }
+    return [
+        [r(buildSite[0][0]), r(buildSite[0][1]), r(buildSite[0][2]), r(buildSite[0][3])],
+        [r(buildSite[1][0]), r(buildSite[1][1]), r(buildSite[1][2]), r(buildSite[1][3])]
+    ]
+    /*for(i in buildSite){
         for(k in buildSite[i]){
             let newBlock = bot.blockAt(buildSite[i][k].position)
             buildSite[i][k] = newBlock
         }
-    }
+    }*/
 }
 
 function doBuildTask(siteTask){
