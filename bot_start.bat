@@ -1,2 +1,3 @@
 cd "Bot src"
-node EchoExample.js
+node Main.js
+pause

@@ -10,12 +10,20 @@ exports.buildPortal = buildPortal
 exports.locateLava = locateLava
 exports.constructionSequence = constructionSequence
 
+<<<<<<< HEAD
+=======
+let searchingForLava = false
+let currTime = 0
+let listener = null
+
+>>>>>>> main
 function buildPortal(bot, mcData){
     //a portal needs 4 scafolding blocks, 12 lava sources, and a bucket of water
     bot.loadPlugin(require('mineflayer-tool').plugin)
     bot.loadPlugin(require('mineflayer-collectblock').plugin)
 
     //make sure you have the water and flint&steel first
+<<<<<<< HEAD
     let haveBuildingMaterials = bot.inventory.count(mcData.itemsByName.water_bucket.id) < 1
         && bot.inventory.count(mcData.itemsByName.flint_and_steel.id) < 1
     if (!haveBuildingMaterials){
@@ -42,6 +50,34 @@ function buildPortal(bot, mcData){
             )
         )
     }
+=======
+    // let haveBuildingMaterials = bot.inventory.count(mcData.itemsByName.water_bucket.id) < 1
+    //     && bot.inventory.count(mcData.itemsByName.flint_and_steel.id) < 1
+    // if (!haveBuildingMaterials){
+    //     return false
+    // }
+
+    // //first, get 4 dirt for scafold
+    // //do this like it's shown here
+    // //https://stackoverflow.com/questions/43064719/javascript-asynchronous-method-in-while-loop
+    // //this creates promise functions to get all the blocks (bot.collectBlock returns a promise, I think)
+    // let neededGathers = 4 - bot.inventory.count(mcData.blocksByName.dirt.id)
+     let gathers = []
+    // for(i in neededGathers){
+    //     gathers.push(
+    //         bot.collectBlock.collect(
+    //             bot.findBlock({
+    //                 matching: mcData.blocksByName.grass.id,
+    //                 maxDistance: 32
+    //             }),
+    //             err => {
+    //                 bot.chat(""+err)
+    //                 console.log(err)
+    //             }
+    //         )
+    //     )
+    // }
+>>>>>>> main
     /*while (!bot.inventory.count(mcData.blocksByName.dirt.id) < 4){
         bot.collectBlock.collect(
             bot.findBlock({
@@ -56,12 +92,38 @@ function buildPortal(bot, mcData){
     }*/
     //the promises are all executed. If they all work out, then we can find the lava!
     findLava = (bot, mcData) => {
+<<<<<<< HEAD
         //go to lava. 1-1 is the origin as far as the build is concerned
         let fullLava = locateLava(bot, mcData)
         if(!fullLava){
             console.log("No valid lava pool could be found!")
             return false
         }
+=======
+        if (listener == null) {
+            listener = bot.on('physicTick', () => {
+                if(searchingForLava && bot.time.age - currTime > 200) {
+                    findLava(bot, mcData)
+                }
+            })
+        }
+        searchingForLava = true
+        //go to lava. 1-1 is the origin as far as the build is concerned
+        let fullLava = locateLava(bot, mcData)
+        
+        if(!fullLava){
+            console.log("No valid lava pool could be found!")
+            currTime = bot.time.age
+            let botPos = bot.entity.position
+            let searchGoal = new GoalXZ(botPos.x+100, botPos.z+100)
+            bot.pathfinder.setGoal(searchGoal)
+            return false
+        }
+
+        console.log(fullLava)
+
+        searchingForLava = false
+>>>>>>> main
         //fullLava.forEach(blockArray => console.log(blockArray.forEach(block => console.log(block.position))))
         for(i in fullLava){
             for(k in fullLava[i]){
@@ -91,6 +153,7 @@ function buildPortal(bot, mcData){
     Promise.all(gathers).then(findLava(bot, mcData))
 }
 
+<<<<<<< HEAD
 function constructionSequence(bot, BuildSite){
     const emptyBucket = 660
     const waterBucket = 661
@@ -109,6 +172,15 @@ function constructionSequence(bot, BuildSite){
         })
     }
     let buildSite = BuildSite
+=======
+function constructionSequence(bot, buildSite){
+    const empytBucket = 660
+    const waterBucket = 661
+    const lavaBucket = 622
+    const findInInv = function findInvItem(item){
+        return bot.inventory.findInventoryItem(item, null)
+    }
+>>>>>>> main
 
     bot.loadPlugin(require('mineflayer-tool').plugin)
     bot.loadPlugin(require('mineflayer-collectblock').plugin)
@@ -136,6 +208,7 @@ function constructionSequence(bot, BuildSite){
         new SiteTask("break", bot, null, buildSite[0][1]),
         new SiteTask("delay"),
         //recollect water in 3
+<<<<<<< HEAD
         new SiteTask("bucket", bot, findInInv(emptyBucket), buildSite[0][2]),
         new SiteTask("delay"),
         //dig out the block at 5
@@ -210,6 +283,11 @@ function constructionSequence(bot, BuildSite){
         new SiteTask("liquid", bot, findInInv(lavaBucket), yOffset(buildSite[0][2], -1)),
         new SiteTask("delay"),
     ]   //done?
+=======
+        new SiteTask("bucket", bot, findInInv(empytBucket), buildSite[0][2]),
+        new SiteTask("delay"),
+    ]
+>>>>>>> main
     
     /*
         this is the money maker. It allows us to sequentially
@@ -221,11 +299,49 @@ function constructionSequence(bot, BuildSite){
     */
     steps.reduce( (previousPromise, nextStep) => {
         return previousPromise.then(() => {
+<<<<<<< HEAD
             buildSite = refreshBuildSite(bot, buildSite)
             return doBuildTask(nextStep);
         }).catch(err => console.log(err));
       }, Promise.resolve());   
     
+=======
+          return doBuildTask(nextStep);
+        }).catch(err => console.log(err));
+      }, Promise.resolve());
+    //.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
+    
+    /*.then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
+    //recollect water in 3
+    .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))
+    */
+    
+    //dig out the block at 5. Now there's 5 scafold blocks
+    //build a 3-high tower on 8.
+        //which block does it choose?
+    //1 above
+    //2 above
+    //add an overhang scafold at that height over 4
+    //place a scafold on 6
+    //place water next to the tower's highest block on 7
+    /*
+        
+        As Fast As Possible:
+        place lava on 1
+        place lava on 4
+        place lava on 1
+        place lava on 4
+        place lava on 3 (using the scafold block above 4)
+        place lava on 2 (using the previously made block)
+        recollect water
+        VERY QUICKLY, dig out 2 and 3. Place lava in both
+            the portal is now complete
+        Enter portal frame
+        look down
+        spam-click flint-n-steel until in Nether
+        /fill -139 65 -258 -145 69 264 minecraft:air
+    */
+>>>>>>> main
 }
 
 function locateLava(bot, mcData){
@@ -560,8 +676,13 @@ function placeScaffold(bot, destination){
     //I am praying that the outermost promise doesn't resolve
     //until the interior ones do
     //They do so I guess  we just live in callback hell
+<<<<<<< HEAD
     let s = bot.equip(scaf, "hand", (err) => {
         if(!err){
+=======
+    let s = bot.equip(scaf, "hand", () => {
+        bot.lookAt(finalFoundation.position, true, () => {
+>>>>>>> main
             bot.placeBlock(finalFoundation, finalFace, (err) => {
                 if(err){
                     console.log("can't place: " + err)
@@ -570,6 +691,7 @@ function placeScaffold(bot, destination){
                     bot.chat("placed!")
                 }
             })
+<<<<<<< HEAD
         }
         else{
             throw err
@@ -584,6 +706,9 @@ function placeScaffold(bot, destination){
                 }
             })
         })*/
+=======
+        })
+>>>>>>> main
     })
     /*let p = s
     .then(bot.lookAt(finalFoundation.position))
@@ -653,7 +778,11 @@ function placeLiquid(bot, liquid, destination){
     p = bot.equip(liquid, "hand", () => {
         bot.lookAt(finalFoundation.position.plus(finalFace), false, (err) => {
             if(!err){
+<<<<<<< HEAD
                 if(bot.blockAtCursor()){console.log("   looking at " + bot.blockAtCursor().position)}
+=======
+                console.log("   looking at " + bot.blockAtCursor().position)
+>>>>>>> main
                 bot.activateItem()
                 bot.chat("Liquided!")
             }
@@ -702,6 +831,7 @@ function bucketLiquid(bot, bucket, destination){
 
 //for high-efficiancy digging
 function digScaffold(bot, destination){
+<<<<<<< HEAD
     const invalidSpaces = {
         air: 0,
         water: 26,
@@ -717,6 +847,10 @@ function digScaffold(bot, destination){
             throw err
         }
     })
+=======
+    console.log(`dig on ${destination.name}: ${destination.position}?`)
+    bot.tool.equipForBlock(destination)
+>>>>>>> main
     return bot.dig(destination, (err) => {
         if(!err){
             bot.chat("Digged!")
@@ -731,6 +865,7 @@ function digScaffold(bot, destination){
 //catch up with itself
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+<<<<<<< HEAD
 }
 
 //update the blocks in the buildsite after every task is complete
@@ -749,6 +884,9 @@ function refreshBuildSite(bot, buildSite){
         }
     }*/
 }
+=======
+  }
+>>>>>>> main
 
 function doBuildTask(siteTask){
     const timeBetweenTasks = 1000
@@ -760,7 +898,11 @@ function doBuildTask(siteTask){
             break;
         case "break":
             //task = digScaffold(s.bot, s.destination)
+<<<<<<< HEAD
             task = digScaffold(s.bot, s.destination)
+=======
+            task = digScaffold.bot, s.destination
+>>>>>>> main
             //task = s.bot.collectBlock.collect(s.destination)
             break;
         case "liquid":

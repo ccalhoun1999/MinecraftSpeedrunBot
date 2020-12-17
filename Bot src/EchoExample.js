@@ -1,55 +1,140 @@
+const { BADHINTS } = require('dns')
 const mineflayer = require('mineflayer')
-const {pathfinder, Movements} = require('mineflayer-pathfinder')
-const {GoalNear} = require('mineflayer-pathfinder').goals
+const { pathfinder, Movements, goals } = require("mineflayer-pathfinder")
+const GoalXZ = goals.GoalXZ
+goals.Goal
  
 const bot = mineflayer.createBot({
   host: 'localhost', // optional
+  port: 25565,
   username: 'Speedrunner',
-  version: "1.16.4"    // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
+  version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
 })
 
-// bot needs to connect before loading
-const mcData = require('minecraft-data')("1.16.4")
-//console.log(mcData)
-
-// plugin loading
 bot.loadPlugin(pathfinder)
+bot.loadPlugin(require('mineflayer-collectblock').plugin)
 
-const moves = new Movements(bot, mcData) 
-bot.pathfinder.setMovements(moves)
+let mcData
+bot.once("spawn", () =>{
+  mcData = require("minecraft-data")(bot.version)
+  const movements = new Movements(bot, mcData)
+  bot.pathfinder.setMovements(movements)
 
-function goToVillage(/*bot, mcData*/) {
-  villageCenter = bot.findBlock({
-    matching: mcData.blocksByName.stone.id,
-    maxDistance: 2500
-  })
+  //bot.chat("/locate village")
+  
+})
 
-  if(!villageCenter){
-    bot.chat("No village within 2500")
+//on chat
+bot.on('chat', (username, message) => {
+  //mineBlock(username, message)
+  const args = message.split(' ')
+  let amount = null
+  switch(true){
+    case args[0] === "craft":
+      if (args.length < 2){
+          bot.chat("need item name")
+      }
+
+      amount = 1
+      if (args.length === 3)
+          amount = parseInt(args[2])
+
+      const item = mcData.findItemOrBlockByName(args[1])
+
+      let craftingTable = mcData.blocksByName["crafting_table"]
+
+      const craftingBlock = bot.findBlock({
+          matching: craftingTable.id
+      })
+
+      const recipe = bot.recipesFor(item.id, null, null, craftingBlock)[0]
+
+      bot.craft(recipe, amount, craftingBlock, err =>{
+        if (err) {
+          bot.chat(err.message)
+        } else {
+          bot.chat('done crafting')
+        }
+      })
+      break
+  }
+})
+
+//recieving server messages
+bot.once("message", (jsonMsg, position) => {
+  goToVillage(jsonMsg)
+})
+
+//update function *********************************** update function
+bot.on("physicTick", () => {
+  bot.setControlState("sprint", true)
+  //bot.chat("/locate village")
+
+  //look at nearest entity
+  // const entity = bot.nearestEntity()
+  // if (entity) bot.lookAt(entity.position.offset(0, entity.height, 0))
+});
+
+//go to nearest village
+function goToVillage(jsonMsg){
+  const text = String(jsonMsg).split(" ")
+
+  if (text[2] != "village"){
     return
   }
 
-  //const nearestVillage = bot.biomes[]
-  const goal = new GoalNear(
-    villageCenter.position.x,
-    villageCenter.position.y,
-    villageCenter.position.z,
-    48
-  )
-  //we don't need to check to see if the destination moves, because villages don't move
-  console.log(goal)
-  bot.pathfinder.setGoal(goal, false)
+  bot.chat(String(jsonMsg))
+  bot.chat("Moving to village now")
 
-  bot.chat("I'm off to the nearest villiage(bell) at" + villageCenter.position)
+  const x = parseInt(text[5])
+  const z = parseInt(text[7])
+
+  const goal = new GoalXZ(x, z)
+  bot.pathfinder.setGoal(goal)
 }
 
-bot.once('spawn', goToVillage)
- 
-bot.on('chat', function (username, message) {
-  if (username === bot.username) return
-  bot.chat(message)
-})
- 
-// Log errors and kick reasons:
-bot.on('kicked', (reason, loggedIn) => console.log(reason, loggedIn))
-bot.on('error', err => console.log(err))
+function mineBlock(username, message) {
+  const args = message.split(' ')
+  if (args[0] !== 'collect') return
+
+  let count = 1
+  if (args.length === 3) count = parseInt(args[1])
+
+  let type = args[1]
+  if (args.length === 3) type = args[2]
+
+  const blockType = mcData.blocksByName[type]
+  if (!blockType) {
+    bot.chat(`"I don't know any blocks named ${type}.`)
+    return
+  }
+
+  const blocks = bot.findBlocks({
+    matching: blockType.id,
+    maxDistance: 64,
+    count: count
+  })
+
+  if (blocks.length === 0) {
+    bot.chat("I don't see that block nearby.")
+    return
+  }
+
+  const targets = []
+  for (let i = 0; i < Math.min(blocks.length, count); i++) {
+    targets.push(bot.blockAt(blocks[i]))
+  }
+
+  bot.chat(`Found ${targets.length} ${type}(s)`)
+
+  bot.collectBlock.collect(targets, err => {
+    if (err) {
+      // An error occurred, report it.
+      bot.chat(err.message)
+      console.log(err)
+    } else {
+      // All blocks have been collected.
+      bot.chat('Done')
+    }
+  })
+}
