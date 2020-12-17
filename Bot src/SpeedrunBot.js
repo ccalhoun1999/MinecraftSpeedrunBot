@@ -16,7 +16,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 62226,
+            port: 57596,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -444,7 +444,7 @@ class SpeedrunBot{
 
     //kill them golems
     goToIronGolem(iron_golem){
-        let goal = new GoalGetToBlock(iron_golem.position.x, iron_golem.position.y+5, iron_golem.position.z)
+        let goal = new GoalGetToBlock(iron_golem.position.x, iron_golem.position.y+6, iron_golem.position.z)
         this.bot.pathfinder.setGoal(goal)
         this.goingToGolem = true
     }
@@ -659,7 +659,8 @@ class SpeedrunBot{
     }
 
     dirtArray(){
-        return [this.mcData.blocksByName["dirt"].id, this.mcData.blocksByName["grass_block"].id, this.mcData.blocksByName["grass_path"].id]
+        //return [this.mcData.blocksByName["dirt"].id, this.mcData.blocksByName["grass_block"].id, this.mcData.blocksByName["grass_path"].id]
+        return [this.mcData.blocksByName["grass_block"].id, this.mcData.blocksByName["grass_path"].id]
     }
 
     mineDirt(){
