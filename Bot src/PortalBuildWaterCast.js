@@ -75,7 +75,7 @@ function buildPortal(bot, mcData){
             console.log("No valid lava pool could be found!")
             currTime = bot.time.age
             let botPos = bot.entity.position
-            let searchGoal = new GoalXZ(botPos.x+100, botPos.z+100)
+            let searchGoal = new GoalXZ(botPos.x-100, botPos.z+100)
             bot.pathfinder.setGoal(searchGoal)
             return false
         }

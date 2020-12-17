@@ -16,7 +16,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 57596,
+            port: 50456,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -31,7 +31,7 @@ class SpeedrunBot{
         this.state = "goingToVillage"
         this.prevState = "goingToVillage"
         //doing an action
-        this.doing = true
+        this.doing = false
         //index of arrays
         this.index = 0
 
@@ -92,7 +92,7 @@ class SpeedrunBot{
                 console.log("chest " + this.chests)
                 console.log("stone axe " + this.stone_axe)
                 console.log("hay " + this.hays)
-                if(this.beds >= 8 && this.chests && this.stone_axe && this.hays >= 8)
+                if(this.beds >= 4 && this.chests && this.stone_axe && this.hays >= 8)
                     this.state = "ironPhase"
                 break;
             case "ironPhase":
@@ -327,7 +327,8 @@ class SpeedrunBot{
                 maxDistance: 64
             })
             if (bed[0] == null){
-                //this.beds = 8
+                if (this.hays >= 8 && this.chests && this.stone_axe)
+                    this.beds = 8
             } else {
                 bedDist = this.distance(bed[0], this.bot.entity.position)
             }
@@ -342,7 +343,8 @@ class SpeedrunBot{
             if (chest[0] != null){
                 chestDist = this.distance(chest[0], this.bot.entity.position)
             } else {
-                this.chests = true
+                if (this.beds >= 4 && this.hays >= 8 && this.stone_axe)
+                    this.chests = true
             }
         }
 
@@ -353,8 +355,8 @@ class SpeedrunBot{
                 maxDistance: 64
             })
             if (hay[0] == null){
-                //if all others completed and no hay then set
-                //this.hays = 8
+                if (this.beds >= 4 && this.chests && this.stone_axe)
+                    this.hays = 8
             } else {
                 hayDist = this.distance(hay[0], this.bot.entity.position)
             }
@@ -370,7 +372,7 @@ class SpeedrunBot{
                     break
                 }
             case bedDist:
-                if (this.beds < 8){
+                if (this.beds < 4){
                     console.log("choosing to get bed")
                     setTimeout(() => { this.mineBed(bed, 1) }, 500)
                 }

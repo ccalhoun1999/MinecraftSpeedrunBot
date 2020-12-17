@@ -249,11 +249,11 @@ speedrunner.bot.on("goal_reached", () =>{
             if (speedrunner.goingToCraft){
                 if (!speedrunner.bread || !speedrunner.bucket){
                     speedrunner.craftItem("wheat", speedrunner.hays)
-                    setTimeout(() => { speedrunner.craftItem("bread", speedrunner.hays*3); }, 9500)
-                    setTimeout(() => { speedrunner.craftItem("bucket", 1) }, 35000)
+                    setTimeout(() => { speedrunner.craftItem("bread", speedrunner.hays*3); }, 9000)
+                    setTimeout(() => { speedrunner.craftItem("bucket", 1) }, 34500)
                     speedrunner.bread = true
                     speedrunner.bucket = true
-                    setTimeout(() => { speedrunner.chooseAction() }, 36000)
+                    setTimeout(() => { speedrunner.chooseAction() }, 35500)
                 } else if (speedrunner.gravel && !speedrunner.flint) {
                     speedrunner.placeGravelHere = speedrunner.findPath()
                     speedrunner.putBlock("gravel", speedrunner.placeGravelHere)
@@ -285,7 +285,7 @@ speedrunner.bot.on("goal_reached", () =>{
                     //if u need more iron go kill more golems
                     if (speedrunner.iron < 4){
                         speedrunner.golem = false
-                        speedrunner.doing = false
+                        setTimeout(() => { speedrunner.ironPhase() }, 500)
                     } else {
                         speedrunner.golem = true
                         setTimeout(() => {speedrunner.moveToBlock("crafting_table"); speedrunner.goingToCraft = true}, 1000)
