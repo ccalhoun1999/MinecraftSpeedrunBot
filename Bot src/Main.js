@@ -208,6 +208,10 @@ speedrunner.bot.on('chat', (username, message) => {
         case "clearInv":
             speedrunner.clearInventory()
             break
+        case "lavaPhase":
+            console.log("looking for lava")
+            speedrunner.doing = true
+            speedrunner.getLava()
     }
 })
 

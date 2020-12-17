@@ -2,7 +2,8 @@ const { throws } = require('assert')
 const { timeStamp, dir } = require('console')
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require("mineflayer-pathfinder")
-const pvp = require("mineflayer-pvp").plugin
+//const pvp = require("mineflayer-pvp").plugin
+const lavaBuild = require('./PortalBuildWaterCast')
 const { PassThrough } = require('stream')
 const Recipe = require('prismarine-recipe')("1.16").Recipe
 const { Vec3 } = require('vec3')
@@ -15,14 +16,14 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 52716,
+            port: 62226,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
 
         this.bot.loadPlugin(pathfinder)
         this.bot.loadPlugin(require('mineflayer-collectblock').plugin)
-        this.bot.loadPlugin(pvp)
+        //this.bot.loadPlugin(pvp)
 
         this.mcData = null
 
@@ -30,7 +31,7 @@ class SpeedrunBot{
         this.state = "goingToVillage"
         this.prevState = "goingToVillage"
         //doing an action
-        this.doing = false
+        this.doing = true
         //index of arrays
         this.index = 0
 
@@ -97,7 +98,7 @@ class SpeedrunBot{
             case "ironPhase":
                 if (this.flint && this.water && this.bread){
                     this.clearInventory()
-                    setTimeout(() => { this.state = "locateLava"; }, 1500)
+                    setTimeout(() => { this.state = "lavaPhase"; }, 1500)
                 }
                     
         }
@@ -146,7 +147,7 @@ class SpeedrunBot{
                     this.findGravel()
                 } else if (this.flint){
                     setTimeout(() => { this.craftBasic("flint_and_steel", 1) }, 500)
-                    setTimeout(() => { this.transitionState() }, 1000)
+                    setTimeout(() => { this.transitionState(); this.chooseAction(); }, 1000)
                 } else if (!this.flint){
                     if (this.hasItem("gravel")){
                         setTimeout(() => {
@@ -160,6 +161,7 @@ class SpeedrunBot{
                 }
                 break
             case "lavaPhase":
+                lavaBuild.buildPortal(this.bot, this.mcData)
                 break
         }
     }
@@ -240,6 +242,11 @@ class SpeedrunBot{
         })
 
         return path
+    }
+
+    getLava() {
+        console.log("getting lava")
+        lavaBuild.buildPortal(this.bot, this.mcData)
     }
 
     craftPlanks(count){
