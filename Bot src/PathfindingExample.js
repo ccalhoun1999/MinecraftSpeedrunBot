@@ -106,7 +106,9 @@ function lavaTest(){
 
 function outerTest(){
     let placeBlock = bot.blockAt(new Vec3(-143, 63, -262))
-    bot.placeBlock(placeBlock, new Vec3(0, 1, 0))
+    bot.equip(bot.inventory.findInventoryItem(9), 'hand', () => {
+        bot.placeBlock(placeBlock, new Vec3(0, 1, 0))
+    })
 }
 
 function lookAtNearestPlayer () {

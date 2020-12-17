@@ -139,7 +139,8 @@ function constructionSequence(bot, buildSite){
     */
     steps.reduce( (previousPromise, nextStep) => {
         return previousPromise.then(() => {
-          return doBuildTask(nextStep);
+            refreshBuildSite(bot, buildSite)
+            return doBuildTask(nextStep);
         }).catch(err => console.log(err));
       }, Promise.resolve());
     //.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
@@ -508,8 +509,8 @@ function placeScaffold(bot, destination){
     //I am praying that the outermost promise doesn't resolve
     //until the interior ones do
     //They do so I guess  we just live in callback hell
-    let s = bot.equip(scaf, "hand", () => {
-        bot.lookAt(finalFoundation.position, true, () => {
+    let s = bot.equip(scaf, "hand", (err) => {
+        if(!err){
             bot.placeBlock(finalFoundation, finalFace, (err) => {
                 if(err){
                     console.log("can't place: " + err)
@@ -518,7 +519,20 @@ function placeScaffold(bot, destination){
                     bot.chat("placed!")
                 }
             })
-        })
+        }
+        else{
+            throw err
+        }
+        /*bot.lookAt(finalFoundation.position, true, () => {
+            bot.placeBlock(finalFoundation, finalFace, (err) => {
+                if(err){
+                    console.log("can't place: " + err)
+                }
+                else{
+                    bot.chat("placed!")
+                }
+            })
+        })*/
     })
     /*let p = s
     .then(bot.lookAt(finalFoundation.position))
@@ -637,8 +651,21 @@ function bucketLiquid(bot, bucket, destination){
 
 //for high-efficiancy digging
 function digScaffold(bot, destination){
+    const invalidSpaces = {
+        air: 0,
+        water: 26,
+        lava: 27
+    }
+    if(Object.values(invalidSpaces).includes(destination.type)){
+        console.log(`Block at ${destination.position} (${destination.name}) isn't diggable`)
+        throw "DIGSCAFFOLD_NODIG"
+    }
     console.log(`dig on ${destination.name}: ${destination.position}?`)
-    bot.tool.equipForBlock(destination)
+    bot.tool.equipForBlock(destination, (requireHarvest=true), (err) => {
+        if(err){
+            throw err
+        }
+    })
     return bot.dig(destination, (err) => {
         if(!err){
             bot.chat("Digged!")
@@ -653,7 +680,17 @@ function digScaffold(bot, destination){
 //catch up with itself
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
+}
+
+//update the blocks in the buildsite after every task is complete
+function refreshBuildSite(bot, buildSite){
+    for(i in buildSite){
+        for(k in buildSite[i]){
+            let newBlock = bot.blockAt(buildSite[i][k].position)
+            buildSite[i][k] = newBlock
+        }
+    }
+}
 
 function doBuildTask(siteTask){
     const timeBetweenTasks = 1000
@@ -665,7 +702,7 @@ function doBuildTask(siteTask){
             break;
         case "break":
             //task = digScaffold(s.bot, s.destination)
-            task = digScaffold.bot, s.destination
+            task = digScaffold(s.bot, s.destination)
             //task = s.bot.collectBlock.collect(s.destination)
             break;
         case "liquid":
