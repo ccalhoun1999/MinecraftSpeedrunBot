@@ -15,7 +15,7 @@ class SpeedrunBot{
     constructor(){
         this.bot = mineflayer.createBot({
             host: 'localhost', // optional
-            port: 51167,
+            port: 52716,
             username: 'Speedrunner',
             version: false     // false corresponds to auto version detection (that's the default), put for example "1.8.8" if you need a specific version
         })
@@ -111,7 +111,7 @@ class SpeedrunBot{
             case "raidingVillage":
                 if (this.three_wood){
                     this.doing = true
-                    setTimeout(() => { this.craftBasic("oak_planks", 3) }, 1000)
+                    setTimeout(() => { this.craftPlanks(3) }, 1000)
                     setTimeout(() => { this.craftBasic("stick", 2) }, 2000)
                     setTimeout(() => { this.craftBasic("crafting_table", 1) }, 3000)
                     setTimeout(() => { this.equipItem("crafting_table", "hand") }, 3500)
@@ -242,6 +242,22 @@ class SpeedrunBot{
         return path
     }
 
+    craftPlanks(count){
+        if(this.hasItem("oak_log")){
+            this.craftBasic("oak_planks", count)
+        } else if (this.hasItem("spruce_log")){
+            this.craftBasic("spruce_planks", count)
+        } else if (this.hasItem("birch_log")){
+            this.craftBasic("birch_planks", count)
+        } else if (this.hasItem("jungle_log")){
+            this.craftBasic("jungle_planks", count)
+        } else if (this.hasItem("acacia_log")){
+            this.craftBasic("acacia_planks", count)
+        } else if (this.hasItem("dark_oak_log")){
+            this.craftBasic("dark_oak_planks", count)
+        }
+    }
+
     woodArray(){
         return [this.mcData.blocksByName["oak_log"].id, this.mcData.blocksByName["spruce_log"].id, 
         this.mcData.blocksByName["birch_log"].id, this.mcData.blocksByName["acacia_log"].id, this.mcData.blocksByName["dark_oak_log"].id]
@@ -278,10 +294,10 @@ class SpeedrunBot{
         let bed
         let chest
         let hay
-        let woodDist = 128
-        let bedDist = 128
-        let chestDist = 128
-        let hayDist = 128
+        let woodDist = 64
+        let bedDist = 64
+        let chestDist = 64
+        let hayDist = 64
 
         if (!this.wooden_pick){
             wood = this.bot.findBlocks({
@@ -301,10 +317,10 @@ class SpeedrunBot{
             bed = this.bot.findBlocks({
                 //all types of beds
                 matching: this.bedArray(),
-                maxDistance: 128
+                maxDistance: 64
             })
             if (bed[0] == null){
-                this.beds = 8
+                //this.beds = 8
             } else {
                 bedDist = this.distance(bed[0], this.bot.entity.position)
             }
@@ -314,7 +330,7 @@ class SpeedrunBot{
         if (!this.chests){
             chest = this.bot.findBlocks({
                 matching: this.mcData.blocksByName["chest"].id,
-                maxDistance: 128
+                maxDistance: 64
             })
             if (chest[0] != null){
                 chestDist = this.distance(chest[0], this.bot.entity.position)
@@ -327,16 +343,17 @@ class SpeedrunBot{
             hay = this.bot.findBlocks({
                 //all types of beds
                 matching: this.mcData.blocksByName["hay_block"].id,
-                maxDistance: 128
+                maxDistance: 64
             })
             if (hay[0] == null){
+                //if all others completed and no hay then set
                 //this.hays = 8
             } else {
                 hayDist = this.distance(hay[0], this.bot.entity.position)
             }
         }
 
-        let min = Math.min(woodDist, bedDist, chestDist, hayDist, 127)
+        let min = Math.min(woodDist, bedDist, chestDist, hayDist, 63)
 
         switch(min){
             case woodDist:
@@ -607,9 +624,7 @@ class SpeedrunBot{
                 this.state = this.prevState
                 ++this.hays
                 console.log("amount of hay" + this.hays)
-                // setTimeout(() => {this.doing = false}, 200)
-                this.transitionState()
-                this.chooseAction()
+                setTimeout(() => {this.transitionState(); this.chooseAction()}, 200)
             }
         })
     }
@@ -631,7 +646,7 @@ class SpeedrunBot{
                 this.state = this.prevState
                 ++this.beds
                 console.log("amount of beds" + this.beds)
-                setTimeout(() => {this.transitionState(); this.chooseAction()}, 500)
+                setTimeout(() => {this.transitionState(); this.chooseAction()}, 200)
             }
         })
     }

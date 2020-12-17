@@ -224,18 +224,18 @@ speedrunner.bot.on("goal_reached", () =>{
             if(speedrunner.goingToCraft){
                 if (speedrunner.three_wood){
                     setTimeout(() => { speedrunner.putBlock("crafting_table", speedrunner.findPath())}, 500)
-                    setTimeout(() => { speedrunner.craftItem("wooden_pickaxe", 1)}, 2000)
+                    setTimeout(() => { speedrunner.craftItem("wooden_pickaxe", 1)}, 1500)
                     setTimeout(() => { speedrunner.mineStone()}, 3000)
                     speedrunner.wooden_pick = true
                     speedrunner.three_wood = false
                 } else if (speedrunner.three_stone){
                     console.log("crafting stone")
-                    setTimeout(() => { speedrunner.craftItem("stone_pickaxe", 1) }, 1000)
-                    setTimeout(() => { speedrunner.mineSixStone()}, 2000)
+                    setTimeout(() => { speedrunner.craftItem("stone_pickaxe", 1) }, 500)
+                    setTimeout(() => { speedrunner.mineSixStone()}, 1500)
                     speedrunner.three_stone = false
                 } else if (speedrunner.six_stone){
-                    setTimeout(() => { speedrunner.craftItem("stone_axe", 1) }, 1000)
-                    setTimeout(() => { speedrunner.stone_axe = true; speedrunner.chooseAction()}, 3000)
+                    setTimeout(() => { speedrunner.craftItem("stone_axe", 1) }, 500)
+                    setTimeout(() => { speedrunner.stone_axe = true; speedrunner.chooseAction()}, 1500)
                     speedrunner.six_stone = false
                 }
                 speedrunner.goingToCraft = false
