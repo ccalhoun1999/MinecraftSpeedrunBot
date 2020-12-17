@@ -105,12 +105,8 @@ function lavaTest(){
 }
 
 function outerTest(){
-    //let placeBlock = bot.blockAt(new Vec3(-140, 64, -261))
-    //bot.placeBlock(placeBlock, new Vec3(0, 1, 0))
-    bot.lookAt(new Vec3(-141, 64, -261), false, (err) => {
-        bot.activateItem()
-        bot.chat("Done!")
-    })
+    let placeBlock = bot.blockAt(new Vec3(-143, 63, -262))
+    bot.placeBlock(placeBlock, new Vec3(0, 1, 0))
 }
 
 function lookAtNearestPlayer () {
@@ -122,8 +118,17 @@ function lookAtNearestPlayer () {
     
     const pos = playerEntity.position.offset(0, playerEntity.height, 0)
     bot.lookAt(pos)
-  }
+}
 
-//bot.once('spawn', () => bot.look(34, 43, false, (err) => console.log("looking..." + err)))
-bot.on('physicTick', lookAtNearestPlayer)
+//bot.once('spawn', outerTest)
+bot.once('spawn', lavaTest)
+bot.on('chat', (username, message) => {
+    if(username === bot.username){return}
+    let args = message.split
+    bot.chat(username + " said " + message)
+    if(args[0] === 'lava'){
+        lavaTest()
+    }
+})
+//bot.on('physicTick', lookAtNearestPlayer)
 //bot.once('spawn', lookAtNearestPlayer)

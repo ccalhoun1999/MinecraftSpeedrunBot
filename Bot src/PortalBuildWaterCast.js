@@ -114,11 +114,11 @@ function constructionSequence(bot, buildSite){
     //  declaration
     //s stands for 'sequence'
     //place a scafold in 2 
-    const s = placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])//placeScaffold(bot, buildSite[0][1])
+    const s = placeScaffold(bot, buildSite[0][1])
     //place water in 3. This makes 4 obsidian
-    /*.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
+    //.then(placeLiquid(bot, findInInv(waterBucket), buildSite[0][2])) //the .then is chaining the above line
     //recollect scafold. The water from 3 will then flow to 2, making 1 obsidian
-    .then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
+    /*.then(bot.collectBlock.collect(bot.blockAt(buildSite[0][1])))
     //recollect water in 3
     .then(bucketLiquid(bot, findInInv(empytBucket), buildSite[0][2]))
     */
@@ -148,6 +148,7 @@ function constructionSequence(bot, buildSite){
         spam-click flint-n-steel until in Nether
         /fill -139 65 -258 -145 69 264 minecraft:air
     */
+   return s
 }
 
 function locateLava(bot, mcData){
@@ -463,13 +464,14 @@ function placeScaffold(bot, destination){
             bot.chat("placable!")
             finalFoundation = foundation
             finalFace = zeroVector.minus(face)
-            console.log("place on " + foundation.position + " on " + zeroVector.minus(face))
+            console.log(`place on ${foundation.name}: ${foundation.position} on ${zeroVector.minus(face)}`)
             break
         }
     }
     if(!finalFoundation){throw("PLACESCAFFOLD_NOFOUNDATION")}
 
-    let p = bot.equip(scaf, "hand")
+    let s = bot.equip(scaf, "hand")
+    let p = s
     .then(bot.lookAt(finalFoundation.position))
     .then(bot.placeBlock(finalFoundation, finalFace), (err) => {
         if(err){
@@ -479,6 +481,7 @@ function placeScaffold(bot, destination){
             bot.chat("placed!")
         }
     })
+    .catch(err => console.log("Build failed: " + err))
 
     return p
 }
@@ -525,7 +528,6 @@ function placeLiquid(bot, liquid, destination){
         //  make sure that block isn't air, water, or lava though. You can't place
         //  blocks against those.
         if(foundation && !Object.values(validSpaces).includes(foundation.type)){
-            bot.chat("placable!")
             finalFoundation = foundation
             finalFace = zeroVector.minus(face)
             console.log("liquid on " + foundation.position + " on " + zeroVector.minus(face))
