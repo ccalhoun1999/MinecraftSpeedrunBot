@@ -320,7 +320,7 @@ class SpeedrunBot{
             } 
         }
 
-        if (this.beds < 8){
+        if (this.beds < 4){
             bed = this.bot.findBlocks({
                 //all types of beds
                 matching: this.bedArray(),
@@ -328,7 +328,7 @@ class SpeedrunBot{
             })
             if (bed[0] == null){
                 if (this.hays >= 8 && this.chests && this.stone_axe)
-                    this.beds = 8
+                    this.beds = 4
             } else {
                 bedDist = this.distance(bed[0], this.bot.entity.position)
             }
